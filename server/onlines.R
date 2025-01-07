@@ -1,3 +1,4 @@
+source("graphs/onlines.R")
 onlines_server <- function(input, output, session) {
   output$onlines_output <- renderPlotly({
     con <- connect_to_clickhouse()

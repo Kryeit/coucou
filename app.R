@@ -1,5 +1,6 @@
 library(shiny)
 library(shinyjs)
+options(shiny.port = 6968)
 
 source("ui/onlines.R")
 source("server/onlines.R")
