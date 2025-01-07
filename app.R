@@ -1,29 +1,25 @@
 library(shiny)
-library(shinyjs)  # Load shinyjs for JavaScript integration
+library(shinyjs)
 
-# Source the UI and server files
 source("ui/onlines.R")
 source("server/onlines.R")
+source("ui/player_movement.R")
+source("server/player_movement.R")
 
-# Define UI function for the home page
 home_ui <- function() {
   fluidPage(
     h1("Home Page")
   )
 }
 
-# Define the UI
 ui <- fluidPage(
-  useShinyjs(),  # Initialize shinyjs
-  uiOutput("page")  # Dynamic UI for rendering pages
+  useShinyjs(),
+  uiOutput("page")
 )
 
-# Define the server logic
 server <- function(input, output, session) {
-  # Reactive value to store the current path
   current_path <- reactiveVal("")
   
-  # JavaScript to monitor URL changes and send the path to Shiny
   observe({
     runjs('
       function getHash() {
@@ -42,44 +38,33 @@ server <- function(input, output, session) {
     ')
   })
   
-  # Observe changes to the path sent from JavaScript
   observeEvent(input$current_path, {
     path <- input$current_path
-    # Debug: Print the current URL path
-    print(paste("Shiny: Current URL Path =", path))
-    
-    # Update the reactive value
     current_path(path)
   })
   
-  # Render the appropriate UI based on the path
   output$page <- renderUI({
     path <- current_path()
-    # Debug: Print the path being evaluated
-    print(paste("Shiny: Evaluating Path =", path))
-    
     if (path == "" || path == "#/") {
-      print("Shiny: Rendering Home Page")
       home_ui()
     } else if (path == "#/onlines") {
-      print("Shiny: Rendering Onlines Page")
-      onlines_ui()
+      onlines_ui("onlines_module")
+    } else if (path == "#/player_movement") {
+      player_movement_ui("player_movement_module")
     } else {
-      print("Shiny: Rendering 404 Page")
       fluidPage(
         h1("404 Not Found")
       )
     }
   })
   
-  # Call the onlines_server module when the /onlines route is active
   observeEvent(current_path(), {
     if (current_path() == "#/onlines") {
-      print("Heeey")
-      callModule(onlines_server, "#/onlines")
+      callModule(onlines_server, "onlines_module")
+    } else if (current_path() == "#/player_movement") {
+      callModule(onlines_server, "player_movement_module")
     }
   })
 }
 
-# Run the app
 shinyApp(ui = ui, server = server)

@@ -1,14 +1,15 @@
 library(shiny)
 
-onlines_ui <- function() {
+onlines_ui <- function(id) {
+  ns <- NS(id)
   fluidPage(
     titlePanel("Online Players per Hour"),
     sidebarLayout(
       sidebarPanel(
-        dateInput("date", "Select Date:", value = Sys.Date())  # Date picker
+        dateInput(ns("date"), "Select Date:", value = Sys.Date())
       ),
       mainPanel(
-        plotlyOutput("onlines_output")
+        plotlyOutput(ns("onlines_output"))
       )
     )
   )
