@@ -16,7 +16,7 @@ onlines_graph <- function(data) {
   
   # Create the ggplot object with a modern theme
   p <- ggplot(data, aes(x = hour, y = count)) +
-    geom_line(color = "#1982C4", size = 1.5) +  # Blue line
+    geom_line(color = "#1982C4", linewidth = 1.5) +  # Blue line
     labs(
       title = "Online Players per Hour",
       x = "Hour of Day",

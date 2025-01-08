@@ -8,6 +8,7 @@ source("ui/onlines.R")
 source("server/onlines.R")
 source("ui/player_movement.R")
 source("server/player_movement.R")
+
 home_ui <- function() {
   fluidPage(
     h1("Coucou! (Named by Tess_, Developed by Muri)")
@@ -26,7 +27,6 @@ server <- function(input, output, session) {
     runjs('
       function getHash() {
         var hash = window.location.hash;
-        console.log("JavaScript: Current Hash =", hash);  // Debug: Log hash in browser console
         return hash;
       }
       
@@ -45,6 +45,7 @@ server <- function(input, output, session) {
     current_path(path)
   })
   
+  # Router
   output$page <- renderUI({
     path <- current_path()
     if (path == "" || path == "#/") {
