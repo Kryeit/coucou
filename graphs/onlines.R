@@ -11,6 +11,9 @@ onlines_graph <- function(data) {
   data$formatted_hour <- sprintf("%02d:00", data$hour)
   data$tooltip <- sprintf("Hour: %s<br>Players: %d", data$formatted_hour, data$count)
   
+  # Create a vector of labels for the x-axis
+  hour_labels <- c(paste0(1:12, "am"), paste0(1:12, "pm"))
+  
   # Create the ggplot object with a modern theme
   p <- ggplot(data, aes(x = hour, y = count)) +
     geom_line(color = "#1982C4", size = 1.5) +  # Blue line
@@ -19,7 +22,11 @@ onlines_graph <- function(data) {
       x = "Hour of Day",
       y = "Number of Players Online"
     ) +
-    scale_x_continuous(breaks = 0:23) +  # Show each hour
+    scale_x_continuous(
+      breaks = 0:23,              # Show each hour from 0 to 23
+      labels = hour_labels,       # Use custom labels
+      limits = c(0, 23)           # Ensure the x-axis limits are 0 to 23
+    ) +
     theme_minimal() +
     theme(
       plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),  # Center and bold title

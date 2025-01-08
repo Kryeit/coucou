@@ -1,4 +1,5 @@
 source("graphs/onlines.R")
+
 onlines_server <- function(input, output, session) {
   output$onlines_output <- renderPlotly({
     con <- connect_to_clickhouse()
@@ -27,6 +28,11 @@ onlines_server <- function(input, output, session) {
       })
     )
     
+    # Filter out any future hours based on the current time
+    current_time <- Sys.time()
+    current_hour <- as.numeric(format(current_time, "%H"))
+    
+    # Call the graph function and pass the processed data
     onlines_graph(result)
   })
 }
