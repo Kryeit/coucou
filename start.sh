@@ -1,14 +1,13 @@
 #!/bin/bash
 
 # Configuration
-APP_DIR="/media/nvme2/coucou"  # Directory containing app.R
+APP_DIR="/var/www/html/coucou"  # Directory containing app.R
 LOG_FILE="app.log"  # Log file for app output
-REQUIRED_PACKAGES=("shiny" "shinyjs" "ggplot2" "plotly" "DBI" "RClickhouse" "crosstalk")  # List of required R packages
+REQUIRED_PACKAGES=("shiny", "shinyjs", "ggplot2", "plotly", "DBI", "RClickhouse", "RPostgres", "htmltools", "DT", "jsonlite")  # List of required R packages
 
-# Install system dependencies
 echo "Installing system dependencies..."
 sudo apt update
-sudo apt install -y libcurl4-openssl-dev libssl-dev
+sudo apt install -y libcurl4-openssl-dev libssl-dev libpq-dev
 
 # Navigate to the app directory
 cd "$APP_DIR" || { echo "Failed to navigate to $APP_DIR"; exit 1; }
