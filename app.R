@@ -4,11 +4,11 @@ library(shinyjs)
 
 options(shiny.port = 6968)
 
-source("ui/onlines.R")
-source("server/onlines.R")
+source("routes/onlines/ui.R")
+source("routes/onlines/server.R")
 
-source("ui/leaderboard.R")
-source("server/leaderboard.R")
+source("routes/leaderboard/ui.R")
+source("routes/leaderboard/server.R")
 
 home_ui <- function() {
   fluidPage(

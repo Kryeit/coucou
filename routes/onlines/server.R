@@ -4,7 +4,7 @@ library(dplyr)
 
 # Import database connection function
 source("db/clickhouse.R")
-source("graphs/onlines.R")
+source("routes/onlines/graph.R")
 
 onlines_server <- function(input, output, session) {
   data_reactive <- reactive({

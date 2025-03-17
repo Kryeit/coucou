@@ -30,3 +30,9 @@ POSTGRES_PASSWORD=YOUR_PASSWORD
 ```bash
 shiny::runApp()
 ```
+Or without a proper workspace:
+```bash
+chmod +x start.sh
+./start.sh
+```
+
