@@ -6,8 +6,6 @@ options(shiny.port = 6968)
 
 source("ui/onlines.R")
 source("server/onlines.R")
-source("ui/player_movement.R")
-source("server/player_movement.R")
 
 home_ui <- function() {
   fluidPage(
@@ -52,8 +50,6 @@ server <- function(input, output, session) {
       home_ui()
     } else if (path == "#/onlines") {
       onlines_ui("onlines_module")
-    } else if (path == "#/player_movement") {
-      player_movement_ui("player_movement_module")
     } else {
       fluidPage(
         h1("404 Not Found")
@@ -64,8 +60,6 @@ server <- function(input, output, session) {
   observeEvent(current_path(), {
     if (current_path() == "#/onlines") {
       callModule(onlines_server, "onlines_module")
-    } else if (current_path() == "#/player_movement") {
-      callModule(player_movement_server, "player_movement_module")
     }
   })
 }

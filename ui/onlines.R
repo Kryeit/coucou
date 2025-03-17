@@ -2,6 +2,7 @@ library(shiny)
 
 onlines_ui <- function(id) {
   ns <- NS(id)
+  
   fluidPage(
     titlePanel("Online Players per Hour"),
     sidebarLayout(
