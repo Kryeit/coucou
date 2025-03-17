@@ -2,10 +2,8 @@ library(DBI)
 library(RPostgres)
 library(pool)
 
-# Global variable to store the connection pool
 pg_pool <- NULL
 
-# Initialize the connection pool once at app startup
 init_postgres_pool <- function() {
   if (is.null(pg_pool)) {
     message("Initializing PostgreSQL connection pool...")
@@ -17,7 +15,6 @@ init_postgres_pool <- function() {
     password <- Sys.getenv("POSTGRES_PASSWORD")
     
     tryCatch({
-      # Create a connection pool
       pg_pool <<- pool::dbPool(
         drv = RPostgres::Postgres(),
         host = host,
@@ -27,10 +24,9 @@ init_postgres_pool <- function() {
         password = password,
         minSize = 1,
         maxSize = 5,
-        idleTimeout = 60 * 60 * 1000  # 1 hour in milliseconds
+        idleTimeout = 60 * 60 * 1000
       )
       
-      # Register an onStop handler to close all connections when the app stops
       shiny::onStop(function() {
         if (!is.null(pg_pool)) {
           message("Closing PostgreSQL connection pool...")
@@ -48,22 +44,36 @@ init_postgres_pool <- function() {
   }
 }
 
-# Function to get a connection from the pool
-connect_to_postgres <- function() {
+get_pg_conn <- function() {
   if (is.null(pg_pool)) {
     init_postgres_pool()
   }
   return(pg_pool)
 }
 
-# Simplified function to execute a query
-execute_postgres_query <- function(query, ...) {
-  conn <- connect_to_postgres()
+query <- function(sql, params = NULL) {
+  conn <- get_pg_conn()
   tryCatch({
-    result <- dbGetQuery(conn, query, ...)
+    if (is.null(params)) {
+      result <- dbGetQuery(conn, sql)
+    } else {
+      result <- dbGetQuery(conn, sql, params)
+    }
     return(result)
   }, error = function(e) {
     message("Error executing query: ", e$message)
+    return(NULL)
+  })
+}
+
+safe_query <- function(sql_template, ...) {
+  params <- list(...)
+  conn <- get_pg_conn()
+  tryCatch({
+    result <- dbGetQuery(conn, sql_template, params)
+    return(result)
+  }, error = function(e) {
+    message("Error executing parameterized query: ", e$message)
     return(NULL)
   })
 }

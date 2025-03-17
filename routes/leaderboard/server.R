@@ -17,59 +17,54 @@ format_player_with_head <- function(username) {
 leaderboard_server <- function(input, output, session) {
   ns <- session$ns
   
-  available_items <- reactive({
+  # Server-side selectize for item_filter
+  observeEvent(input$stat_type, {
     req(input$stat_type)
     
-    query <- sprintf("
+    sql <- "
       SELECT DISTINCT key as item
-      FROM users, jsonb_object_keys(stats->'stats'->%s) key
-      WHERE stats->'stats'->%s IS NOT NULL
+      FROM users, jsonb_object_keys(stats->'stats'->$1) key
+      WHERE stats->'stats'->$1 IS NOT NULL
       ORDER BY key
-    ", 
-                     paste0("'", input$stat_type, "'"),
-                     paste0("'", input$stat_type, "'"))
+    "
     
-    result <- execute_postgres_query(query)
+    items <- safe_query(sql, input$stat_type)
     
-    if (!is.null(result) && nrow(result) > 0) {
-      return(result$item)
+    if (!is.null(items) && nrow(items) > 0) {
+      updateSelectizeInput(session, "item_filter", 
+                           choices = items$item,
+                           server = TRUE)
+      
+      # Set default value to first item after a short delay
+      if (nrow(items) > 0) {
+        first_item <- items$item[1]
+        shinyjs::delay(100, {
+          updateSelectizeInput(session, "item_filter", selected = first_item)
+        })
+      }
     } else {
-      return(character(0))
+      updateSelectizeInput(session, "item_filter", 
+                           choices = character(0),
+                           server = TRUE)
     }
-  })
-  
-  observe({
-    req(input$stat_type)
-    
-    items <- available_items()
-    
-    selected_item <- if (length(items) > 0) items[1] else NULL
-    
-    updateSelectInput(session, "item_filter", 
-                      choices = items,
-                      selected = selected_item)
   })
   
   player_stats <- reactive({
     req(input$stat_type, input$item_filter)
     
-    query <- sprintf("
+    sql <- "
       SELECT 
         username,
-        (stats->'stats'->%s->>%s)::numeric as count,
+        (stats->'stats'->$1->>$2)::numeric as count,
         last_seen
       FROM users
       WHERE 
-        stats->'stats'->%s ? %s
-        AND (stats->'stats'->%s->>%s)::numeric > 0
-      ORDER BY (stats->'stats'->%s->>%s)::numeric DESC
-    ", 
-                     paste0("'", input$stat_type, "'"), paste0("'", input$item_filter, "'"),
-                     paste0("'", input$stat_type, "'"), paste0("'", input$item_filter, "'"),
-                     paste0("'", input$stat_type, "'"), paste0("'", input$item_filter, "'"),
-                     paste0("'", input$stat_type, "'"), paste0("'", input$item_filter, "'"))
+        stats->'stats'->$1 ? $2
+        AND (stats->'stats'->$1->>$2)::numeric > 0
+      ORDER BY (stats->'stats'->$1->>$2)::numeric DESC
+    "
     
-    result <- execute_postgres_query(query)
+    result <- safe_query(sql, input$stat_type, input$item_filter)
     
     if (!is.null(result) && nrow(result) > 0) {
       result$count <- as.numeric(result$count)
@@ -84,6 +79,10 @@ leaderboard_server <- function(input, output, session) {
     
     data <- player_stats()
     if (is.null(data) || nrow(data) == 0) return(NULL)
+    
+    # Update entries count
+    entries_text <- paste0("(", nrow(data), " entries)")
+    shinyjs::html("entries_count", entries_text)
     
     stat_name <- switch(input$stat_type,
                         "minecraft:used" = "Items Used",
