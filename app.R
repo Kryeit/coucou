@@ -7,6 +7,9 @@ options(shiny.port = 6968)
 source("ui/onlines.R")
 source("server/onlines.R")
 
+source("ui/leaderboard.R")
+source("server/leaderboard.R")
+
 home_ui <- function() {
   fluidPage(
     h1("Coucou! (Named by Tess_, Developed by Muri)")
@@ -50,6 +53,8 @@ server <- function(input, output, session) {
       home_ui()
     } else if (path == "#/onlines") {
       onlines_ui("onlines_module")
+    } else if (path == "#/leaderboard") {
+      leaderboard_ui("leaderboard_module")
     } else {
       fluidPage(
         h1("404 Not Found")
@@ -60,6 +65,8 @@ server <- function(input, output, session) {
   observeEvent(current_path(), {
     if (current_path() == "#/onlines") {
       callModule(onlines_server, "onlines_module")
+    } else if (current_path() == "#/leaderboard") {
+      callModule(leaderboard_server, "leaderboard_module")
     }
   })
 }
