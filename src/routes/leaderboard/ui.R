@@ -10,23 +10,6 @@ leaderboard_ui <- function(id) {
 .control-label { font-weight: 400; color: #495057; }
 .selectize-input { border: 1px solid #ced4da; }
 
-.banner-container {
-  width: 100%;
-  text-align: left;
-  margin-bottom: 10px;
-  padding-top: 10px;
-}
-
-.banner-link {
-  display: inline-block;
-}
-
-.banner-image {
-  max-width: 600px;
-  min-height: 80px;
-  image-rendering: pixelated;
-}
-
 .leaderboard-selectors {
   display: flex;
   align-items: center;
@@ -66,13 +49,6 @@ leaderboard_ui <- function(id) {
   justify-content: center;
   cursor: pointer;
   margin-bottom: 15px;
-}
-
-.donation-link {
-  margin-right: 15px;
-  text-decoration: none;
-  display: inline-block;
-  margin-top: -15px;
 }
 
 .chart-container {
@@ -210,7 +186,7 @@ $(document).ready(function() {
 ")),
     
     div(class = "banner-container",
-        a(href = "https://coucou.kryeit.com", class = "banner-link",
+        a(href = "https://coucou.kryeit.com",
           img(src = "assets/banner.png", class = "banner-image", alt = "Kryeit Banner")
         )
     ),
@@ -253,7 +229,7 @@ $(document).ready(function() {
                
                div(class = "spacer"),
                
-               a(href = "https://ko-fi.com/kryeit", "Donation Link", class = "donation-link", target = "_blank"),
+               a(href = "https://ko-fi.com/kryeit", "Donation Link", class = "link", target = "_blank", style="margin-top: -3px;"),
                
                downloadButton(ns("download_csv"), "Download CSV", class = "download-btn"),
                

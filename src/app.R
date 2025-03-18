@@ -13,7 +13,7 @@ addResourcePath("assets", "assets")
 home_ui <- function() {
   fluidPage(
     div(class = "banner-container",
-        a(href = "https://coucou.kryeit.com", class = "banner-link",
+        a(href = "https://coucou.kryeit.com",
           img(src = "assets/banner.png", class = "banner-image", alt = "Kryeit Banner")
         )
     ),
