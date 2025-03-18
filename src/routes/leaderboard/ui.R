@@ -64,7 +64,6 @@ leaderboard_ui <- function(id) {
 }
 
 .chart-container {
-  margin-top: 20px;
   position: relative;
   background: white;
   border-radius: 4px;

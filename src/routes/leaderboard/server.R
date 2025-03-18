@@ -22,11 +22,11 @@ leaderboard_server <- function(input, output, session) {
     req(input$stat_type)
     
     sql <- "
-      SELECT DISTINCT key as item
-      FROM users, jsonb_object_keys(stats->'stats'->$1) key
-      WHERE stats->'stats'->$1 IS NOT NULL
-      ORDER BY key
-    "
+            SELECT DISTINCT key as item, SPLIT_PART(key, ':', 2) as sort_key
+            FROM users, jsonb_object_keys(stats->'stats'->$1) key
+            WHERE stats->'stats'->$1 IS NOT NULL
+            ORDER BY sort_key
+        "
     
     items <- safe_query(sql, input$stat_type)
     
