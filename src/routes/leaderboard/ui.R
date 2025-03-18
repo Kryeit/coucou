@@ -56,11 +56,19 @@ leaderboard_ui <- function(id) {
   cursor: pointer;
 }
 
+.share-btn {
+  margin-top: -15px;
+  margin-right: 10px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
 .donation-link {
   margin-right: 15px;
   text-decoration: none;
   display: inline-block;
-  margin-top: -15px; /* Hardcoded pixels to match button position */
+  margin-top: -15px;
 }
 
 .chart-container {
@@ -160,7 +168,7 @@ leaderboard_ui <- function(id) {
   overflow: hidden;
   transition: max-height 0.3s ease-out;
 }
-    ")),
+")),
     
     tags$script(HTML("
 $(document).ready(function() {
@@ -176,8 +184,15 @@ $(document).ready(function() {
       arrow.removeClass('rotated');
     }
   });
-});
-    ")),
+  
+  // Register message handler for updating URL
+  Shiny.addCustomMessageHandler('updateUrl', function(message) {
+    if (window.updateLeaderboardUrl) {
+      window.updateLeaderboardUrl(message.stat_type, message.item_filter);
+    }
+  });
+}); 
+")),
     
     div(class = "banner-container",
         a(href = "https://coucou.kryeit.com", class = "banner-link",
@@ -193,13 +208,13 @@ $(document).ready(function() {
                  class = "selector-container",
                  selectInput(ns("stat_type"), "Leaderboards:", 
                              choices = c(
+                               "Custom" = "minecraft:custom", 
                                "Items Used" = "minecraft:used",
                                "Items Broken" = "minecraft:broken",
                                "Items Crafted" = "minecraft:crafted",
                                "Items Mined" = "minecraft:mined",
                                "Mob Kills" = "minecraft:killed",
-                               "Deaths" = "minecraft:killed_by",
-                               "Custom" = "minecraft:custom"
+                               "Deaths" = "minecraft:killed_by"
                              ))
                ),
                
@@ -224,6 +239,8 @@ $(document).ready(function() {
                div(class = "spacer"),
                
                a(href = "https://ko-fi.com/kryeit", "Donation Link", class = "donation-link", target = "_blank"),
+               
+               uiOutput(ns("share_link")),
                
                downloadButton(ns("download_csv"), "Download CSV", class = "download-btn")
              )

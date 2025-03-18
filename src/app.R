@@ -36,13 +36,49 @@ server <- function(input, output, session) {
         return hash;
       }
       
+      function getUrlParams() {
+        // Parse parameters from the hash part
+        var hash = window.location.hash;
+        var paramIndex = hash.indexOf("?");
+        
+        if (paramIndex !== -1) {
+          var paramString = hash.substring(paramIndex + 1);
+          var urlParams = new URLSearchParams(paramString);
+          return {
+            hash: hash.substring(0, paramIndex),
+            stat_type: urlParams.get("stat_type"),
+            item_filter: urlParams.get("item_filter")
+          };
+        } else {
+          return {
+            hash: hash,
+            stat_type: null,
+            item_filter: null
+          };
+        }
+      }
+      
       // Send the initial hash to Shiny
-      Shiny.setInputValue("current_path", getHash());
+      var params = getUrlParams();
+      Shiny.setInputValue("current_path", params.hash || "");
+      if (params.stat_type) Shiny.setInputValue("url_stat_type", params.stat_type);
+      if (params.item_filter) Shiny.setInputValue("url_item_filter", params.item_filter);
       
       // Monitor hash changes
       window.addEventListener("hashchange", function() {
-        Shiny.setInputValue("current_path", getHash());
+        var params = getUrlParams();
+        Shiny.setInputValue("current_path", params.hash || "");
+        if (params.stat_type) Shiny.setInputValue("url_stat_type", params.stat_type);
+        if (params.item_filter) Shiny.setInputValue("url_item_filter", params.item_filter);
       });
+      
+      // Function to update URL with current selections
+      window.updateLeaderboardUrl = function(stat_type, item_filter) {
+        var baseHash = "#/leaderboard";
+        var newHash = baseHash + "?stat_type=" + encodeURIComponent(stat_type) + 
+                    "&item_filter=" + encodeURIComponent(item_filter);
+        window.history.replaceState({}, "", newHash);
+      };
     ')
   })
   
