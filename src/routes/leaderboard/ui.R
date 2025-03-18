@@ -15,7 +15,6 @@ leaderboard_ui <- function(id) {
   text-align: left;
   margin-bottom: 10px;
   padding-top: 10px;
-  padding-left: 10px;
 }
 
 .banner-link {
@@ -57,11 +56,16 @@ leaderboard_ui <- function(id) {
 }
 
 .share-btn {
-  margin-top: -15px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
   margin-right: 10px;
-  padding: 8px 10px;
-  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  margin-bottom: 15px;
 }
 
 .donation-link {
@@ -191,6 +195,17 @@ $(document).ready(function() {
       window.updateLeaderboardUrl(message.stat_type, message.item_filter);
     }
   });
+  
+  // Share button click handler
+  $(document).on('click', '#leaderboard_module-copy_share_link', function() {
+    var currentUrl = window.location.origin + window.location.pathname + window.location.hash;
+    navigator.clipboard.writeText(currentUrl).then(function() {
+      $('#leaderboard_module-copy_share_link').html('<i class=\"fa fa-check\"></i>');
+      setTimeout(function() {
+        $('#leaderboard_module-copy_share_link').html('<i class=\"fa fa-share-alt\"></i>');
+      }, 2000);
+    });
+  });
 }); 
 ")),
     
@@ -240,9 +255,15 @@ $(document).ready(function() {
                
                a(href = "https://ko-fi.com/kryeit", "Donation Link", class = "donation-link", target = "_blank"),
                
-               uiOutput(ns("share_link")),
+               downloadButton(ns("download_csv"), "Download CSV", class = "download-btn"),
                
-               downloadButton(ns("download_csv"), "Download CSV", class = "download-btn")
+               # Fixed share button (always visible)
+               actionButton(
+                 ns("copy_share_link"), 
+                 "",
+                 icon = icon("share-alt"),
+                 class = "share-btn"
+               )
              )
       )
     ),

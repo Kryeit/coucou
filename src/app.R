@@ -33,7 +33,9 @@ server <- function(input, output, session) {
     runjs('
       function getHash() {
         var hash = window.location.hash;
-        return hash;
+        // Extract just the route part if there are parameters
+        var routeEnd = hash.indexOf("?");
+        return routeEnd !== -1 ? hash.substring(0, routeEnd) : hash;
       }
       
       function getUrlParams() {
@@ -44,32 +46,28 @@ server <- function(input, output, session) {
         if (paramIndex !== -1) {
           var paramString = hash.substring(paramIndex + 1);
           var urlParams = new URLSearchParams(paramString);
-          return {
-            hash: hash.substring(0, paramIndex),
+          
+          // Store URL parameters as global data to be accessed by the module
+          window.leaderboardParams = {
             stat_type: urlParams.get("stat_type"),
             item_filter: urlParams.get("item_filter")
           };
+          
+          return hash.substring(0, paramIndex);
         } else {
-          return {
-            hash: hash,
-            stat_type: null,
-            item_filter: null
-          };
+          window.leaderboardParams = null;
+          return hash;
         }
       }
       
       // Send the initial hash to Shiny
-      var params = getUrlParams();
-      Shiny.setInputValue("current_path", params.hash || "");
-      if (params.stat_type) Shiny.setInputValue("url_stat_type", params.stat_type);
-      if (params.item_filter) Shiny.setInputValue("url_item_filter", params.item_filter);
+      var hash = getUrlParams();
+      Shiny.setInputValue("current_path", hash || "");
       
       // Monitor hash changes
       window.addEventListener("hashchange", function() {
-        var params = getUrlParams();
-        Shiny.setInputValue("current_path", params.hash || "");
-        if (params.stat_type) Shiny.setInputValue("url_stat_type", params.stat_type);
-        if (params.item_filter) Shiny.setInputValue("url_item_filter", params.item_filter);
+        var hash = getUrlParams();
+        Shiny.setInputValue("current_path", hash || "");
       });
       
       // Function to update URL with current selections

@@ -17,28 +17,39 @@ format_player_with_head <- function(username) {
 leaderboard_server <- function(input, output, session) {
   ns <- session$ns
   
-  # Values to store item choices
-  item_choices <- reactiveVal(NULL)
+  # Check for URL parameters on initialization (before any other observers run)
+  url_params <- reactiveVal(NULL)
   
-  # Set default values to ensure play_time is selected first
-  play_time_set <- reactiveVal(FALSE)
+  # Get URL parameters from JavaScript
+  runjs("
+    if (window.leaderboardParams) {
+      Shiny.setInputValue('leaderboard_module-url_params', window.leaderboardParams);
+    }
+  ")
   
-  # Handle URL parameters
-  observeEvent(input$url_stat_type, {
-    req(input$url_stat_type)
-    updateSelectInput(session, "stat_type", selected = input$url_stat_type)
-  }, once = TRUE)
+  # Store URL parameters if they exist
+  observeEvent(input$url_params, {
+    req(input$url_params)
+    url_params(input$url_params)
+  }, once = TRUE, priority = 20)
+  
+  # Initialize stat_type selection (don't load items yet)
+  observe({
+    params <- url_params()
+    if (!is.null(params) && !is.null(params$stat_type)) {
+      # If URL parameter exists, use it
+      updateSelectInput(session, "stat_type", selected = params$stat_type)
+    } else {
+      # Default to custom if no parameter
+      updateSelectInput(session, "stat_type", selected = "minecraft:custom")
+    }
+  }, priority = 15)
   
   # Server-side selectize for item_filter
   observeEvent(input$stat_type, {
     req(input$stat_type)
     
-    # If no URL parameters are present and this is the first load, default to custom/play_time
-    if (!play_time_set() && is.null(input$url_stat_type) && is.null(input$url_item_filter) && input$stat_type != "minecraft:custom") {
-      updateSelectInput(session, "stat_type", selected = "minecraft:custom")
-      return()
-    }
-    
+    # Load items for the current stat_type
     sql <- "
             SELECT DISTINCT key as item, SPLIT_PART(key, ':', 2) as sort_key
             FROM users, jsonb_object_keys(stats->'stats'->$1) key
@@ -49,33 +60,34 @@ leaderboard_server <- function(input, output, session) {
     items <- safe_query(sql, input$stat_type)
     
     if (!is.null(items) && nrow(items) > 0) {
-      item_choices(items$item)
       updateSelectizeInput(session, "item_filter", 
                            choices = items$item,
                            server = TRUE)
       
-      shinyjs::delay(100, {
-        # If URL parameter exists and is valid
-        if (!is.null(input$url_item_filter) && input$url_item_filter %in% items$item) {
-          updateSelectizeInput(session, "item_filter", selected = input$url_item_filter)
-        } 
-        # For custom stat type, use play_time as default if available
-        else if (input$stat_type == "minecraft:custom" && "minecraft:play_time" %in% items$item) {
+      # Delay to ensure selectize is fully initialized
+      shinyjs::delay(300, {
+        params <- url_params()
+        
+        if (!is.null(params) && !is.null(params$item_filter) && params$item_filter %in% items$item) {
+          # If URL parameter exists and is valid, use it
+          updateSelectizeInput(session, "item_filter", selected = params$item_filter)
+        } else if (input$stat_type == "minecraft:custom" && "minecraft:play_time" %in% items$item) {
+          # Default to play_time for custom stats
           updateSelectizeInput(session, "item_filter", selected = "minecraft:play_time")
-          play_time_set(TRUE)
-        }
-        # Otherwise use first item in list
-        else if (nrow(items) > 0) {
+        } else if (nrow(items) > 0) {
+          # Otherwise use first item
           updateSelectizeInput(session, "item_filter", selected = items$item[1])
         }
+        
+        # Clear URL params after using them to prevent reapplication
+        url_params(NULL)
       })
     } else {
-      item_choices(NULL)
       updateSelectizeInput(session, "item_filter", 
                            choices = character(0),
                            server = TRUE)
     }
-  })
+  }, priority = 10)
   
   # Update URL when selections change
   observeEvent(list(input$stat_type, input$item_filter), {
@@ -87,6 +99,12 @@ leaderboard_server <- function(input, output, session) {
         item_filter = input$item_filter
       )
     )
+  })
+  
+  # Handle share button click (server side)
+  observeEvent(input$copy_share_link, {
+    # This is empty because all the action happens client-side
+    # But we need to keep this to register the button click with Shiny
   })
   
   player_stats <- reactive({
@@ -207,21 +225,4 @@ leaderboard_server <- function(input, output, session) {
       write.csv(data[, c("rank", "username", "count", "last_seen")], file, row.names = FALSE)
     }
   )
-  
-  # Create a share button handler
-  output$share_link <- renderUI({
-    req(input$stat_type, input$item_filter)
-    current_url <- paste0(
-      "#/leaderboard?stat_type=", URLencode(input$stat_type),
-      "&item_filter=", URLencode(input$item_filter)
-    )
-    
-    actionButton(
-      ns("copy_link"), 
-      "Copy Share Link",
-      icon = icon("share-alt"),
-      onclick = sprintf("navigator.clipboard.writeText(window.location.origin + window.location.pathname + '%s'); this.innerHTML = 'Link Copied!'; setTimeout(() => { this.innerHTML = '<i class=\"fa fa-share-alt\"></i> Copy Share Link'; }, 2000);", 
-                        current_url)
-    )
-  })
 }
