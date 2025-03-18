@@ -1,7 +1,6 @@
 library(shiny)
 library(plotly)
 library(dplyr)
-
 # Import database connection function
 source("db/clickhouse.R")
 source("routes/onlines/graph.R")
@@ -17,14 +16,16 @@ onlines_server <- function(input, output, session) {
     con <- connect_to_clickhouse()
     on.exit(dbDisconnect(con))
     
+    # Use parameterized query to prevent SQL injection
     selected_date <- format(input$date, "%Y-%m-%d")
     
-    query <- sprintf("
+    query <- "
       SELECT start_time, end_time
       FROM sessions
-      WHERE toDate(start_time) = '%s';", selected_date)
+      WHERE toDate(start_time) = ?;"
     
-    data <- dbGetQuery(con, query)
+    # Use parameterized query
+    data <- dbGetPreparedQuery(con, query, data.frame(date = selected_date))
     
     data$start_time <- as.POSIXct(data$start_time)
     data$end_time <- as.POSIXct(data$end_time)
