@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-APP_DIR="/var/www/html/coucou"  # Directory containing app.R
+APP_DIR="/var/www/html/coucou/src"  # Directory containing app.R
 LOG_FILE="app.log"  # Log file for app output
 REQUIRED_PACKAGES=("shiny", "shinyjs", "ggplot2", "plotly", "DBI", "RClickhouse", "RPostgres", "htmltools", "DT", "jsonlite", "pool")  # List of required R packages
 
