@@ -17,39 +17,47 @@ format_player_with_head <- function(username) {
 leaderboard_server <- function(input, output, session) {
   ns <- session$ns
   
-  # Check for URL parameters on initialization (before any other observers run)
+  # Reactive value to track URL parameters
   url_params <- reactiveVal(NULL)
   
-  # Get URL parameters from JavaScript
+  # Flag to prevent multiple triggering
+  url_params_processed <- reactiveVal(FALSE)
+  
+  # JavaScript to set URL parameters from window object
   runjs("
     if (window.leaderboardParams) {
       Shiny.setInputValue('leaderboard_module-url_params', window.leaderboardParams);
     }
   ")
   
-  # Store URL parameters if they exist
+  # Capture URL parameters
   observeEvent(input$url_params, {
     req(input$url_params)
     url_params(input$url_params)
-  }, once = TRUE, priority = 20)
+    url_params_processed(FALSE)
+  }, once = FALSE, priority = 100)
   
-  # Initialize stat_type selection (don't load items yet)
+  # Process URL parameters
   observe({
     params <- url_params()
-    if (!is.null(params) && !is.null(params$stat_type)) {
-      # If URL parameter exists, use it
-      updateSelectInput(session, "stat_type", selected = params$stat_type)
-    } else {
-      # Default to custom if no parameter
-      updateSelectInput(session, "stat_type", selected = "minecraft:custom")
+    processed <- url_params_processed()
+    
+    # Only process if params exist and haven't been processed
+    if (!is.null(params) && !processed) {
+      # Prioritize URL parameters
+      if (!is.null(params$stat_type)) {
+        updateSelectInput(session, "stat_type", selected = params$stat_type)
+      }
+      
+      # Mark as processed to prevent repeated processing
+      url_params_processed(TRUE)
     }
-  }, priority = 15)
+  }, priority = 99)
   
-  # Server-side selectize for item_filter
+  # Handle stat type changes
   observeEvent(input$stat_type, {
     req(input$stat_type)
     
-    # Load items for the current stat_type
     sql <- "
             SELECT DISTINCT key as item, SPLIT_PART(key, ':', 2) as sort_key
             FROM users, jsonb_object_keys(stats->'stats'->$1) key
@@ -64,23 +72,17 @@ leaderboard_server <- function(input, output, session) {
                            choices = items$item,
                            server = TRUE)
       
-      # Delay to ensure selectize is fully initialized
       shinyjs::delay(300, {
         params <- url_params()
         
         if (!is.null(params) && !is.null(params$item_filter) && params$item_filter %in% items$item) {
-          # If URL parameter exists and is valid, use it
+          # Prioritize URL parameter for item filter
           updateSelectizeInput(session, "item_filter", selected = params$item_filter)
         } else if (input$stat_type == "minecraft:custom" && "minecraft:play_time" %in% items$item) {
-          # Default to play_time for custom stats
           updateSelectizeInput(session, "item_filter", selected = "minecraft:play_time")
         } else if (nrow(items) > 0) {
-          # Otherwise use first item
           updateSelectizeInput(session, "item_filter", selected = items$item[1])
         }
-        
-        # Clear URL params after using them to prevent reapplication
-        url_params(NULL)
       })
     } else {
       updateSelectizeInput(session, "item_filter", 
@@ -89,7 +91,7 @@ leaderboard_server <- function(input, output, session) {
     }
   }, priority = 10)
   
-  # Update URL when selections change
+  # Update URL dynamically
   observeEvent(list(input$stat_type, input$item_filter), {
     req(input$stat_type, input$item_filter)
     session$sendCustomMessage(
@@ -101,12 +103,11 @@ leaderboard_server <- function(input, output, session) {
     )
   })
   
-  # Handle share button click (server side)
   observeEvent(input$copy_share_link, {
-    # This is empty because all the action happens client-side
-    # But we need to keep this to register the button click with Shiny
+    # Placeholder for share link functionality
   })
   
+  # Reactive to fetch player stats
   player_stats <- reactive({
     req(input$stat_type, input$item_filter)
     
@@ -132,13 +133,13 @@ leaderboard_server <- function(input, output, session) {
     }
   })
   
+  # Observe and update chart
   observe({
     req(player_stats())
     
     data <- player_stats()
     if (is.null(data) || nrow(data) == 0) return(NULL)
     
-    # Update entries count
     entries_text <- paste0("(", nrow(data), " entries)")
     shinyjs::html("entries_count", entries_text)
     
@@ -174,6 +175,7 @@ leaderboard_server <- function(input, output, session) {
     shinyjs::html("custom_chart", chart_html)
   })
   
+  # Render leaderboard table
   output$leaderboard_table <- DT::renderDataTable({
     req(player_stats())
     
@@ -214,6 +216,7 @@ leaderboard_server <- function(input, output, session) {
       )
   })
   
+  # Download CSV handler
   output$download_csv <- downloadHandler(
     filename = function() {
       paste("leaderboard-", input$stat_type, "-", input$item_filter, "-", Sys.Date(), ".csv", sep = "")

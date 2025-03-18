@@ -5,11 +5,9 @@ options(shiny.port = 6968)
 
 source("routes/onlines/ui.R")
 source("routes/onlines/server.R")
-
 source("routes/leaderboard/ui.R")
 source("routes/leaderboard/server.R")
 
-# Configure static file serving for assets directory
 addResourcePath("assets", "assets")
 
 home_ui <- function() {
@@ -20,6 +18,7 @@ home_ui <- function() {
 
 ui <- fluidPage(
   tags$head(
+    tags$title("Coucou"),
     tags$link(rel = "shortcut icon", href = "assets/icon.png")
   ),
   useShinyjs(),
@@ -31,46 +30,32 @@ server <- function(input, output, session) {
   
   observe({
     runjs('
-      function getHash() {
-        var hash = window.location.hash;
-        // Extract just the route part if there are parameters
-        var routeEnd = hash.indexOf("?");
-        return routeEnd !== -1 ? hash.substring(0, routeEnd) : hash;
-      }
-      
       function getUrlParams() {
-        // Parse parameters from the hash part
         var hash = window.location.hash;
         var paramIndex = hash.indexOf("?");
-        
+        var params = {};
         if (paramIndex !== -1) {
           var paramString = hash.substring(paramIndex + 1);
-          var urlParams = new URLSearchParams(paramString);
-          
-          // Store URL parameters as global data to be accessed by the module
-          window.leaderboardParams = {
-            stat_type: urlParams.get("stat_type"),
-            item_filter: urlParams.get("item_filter")
-          };
-          
-          return hash.substring(0, paramIndex);
-        } else {
-          window.leaderboardParams = null;
-          return hash;
+          new URLSearchParams(paramString).forEach((value, key) => {
+            params[key] = value;
+          });
         }
+        window.urlParams = params;
+        return hash.substring(0, paramIndex !== -1 ? paramIndex : hash.length);
       }
       
-      // Send the initial hash to Shiny
       var hash = getUrlParams();
       Shiny.setInputValue("current_path", hash || "");
       
-      // Monitor hash changes
       window.addEventListener("hashchange", function() {
         var hash = getUrlParams();
         Shiny.setInputValue("current_path", hash || "");
       });
       
-      // Function to update URL with current selections
+      if (window.urlParams && window.urlParams.stat_type) {
+        Shiny.setInputValue("leaderboard_module-url_params", window.urlParams);
+      }
+      
       window.updateLeaderboardUrl = function(stat_type, item_filter) {
         var baseHash = "#/leaderboard";
         var newHash = baseHash + "?stat_type=" + encodeURIComponent(stat_type) + 
@@ -85,7 +70,6 @@ server <- function(input, output, session) {
     current_path(path)
   })
   
-  # Router
   output$page <- renderUI({
     path <- current_path()
     if (path == "" || path == "#/") {
