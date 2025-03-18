@@ -12,14 +12,22 @@ addResourcePath("assets", "assets")
 
 home_ui <- function() {
   fluidPage(
-    h1("Coucou! (Named by Tess_, Developed by Muri)")
+    div(class = "banner-container",
+        a(href = "https://coucou.kryeit.com", class = "banner-link",
+          img(src = "assets/banner.png", class = "banner-image", alt = "Kryeit Banner")
+        )
+    ),
+    a(href = "https://coucou.kryeit.com/#/leaderboard", "Leaderboard", class = "link", target = "_blank"),
+    a(href = "https://coucou.kryeit.com/#/onlines", "Onlines", class = "link", target = "_blank"),
+    
   )
 }
 
 ui <- fluidPage(
   tags$head(
     tags$title("Coucou"),
-    tags$link(rel = "shortcut icon", href = "assets/icon.png")
+    tags$link(rel = "shortcut icon", href = "assets/icon.png"),
+    tags$link(rel = "stylesheet", type = "text/css", href = "assets/main.css")
   ),
   useShinyjs(),
   uiOutput("page")
