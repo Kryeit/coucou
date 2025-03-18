@@ -17,8 +17,8 @@ home_ui <- function() {
           img(src = "assets/banner.png", class = "banner-image", alt = "Kryeit Banner")
         )
     ),
-    a(href = "https://coucou.kryeit.com/#/leaderboard", "Leaderboard", class = "link", target = "_blank"),
-    a(href = "https://coucou.kryeit.com/#/onlines", "Onlines", class = "link", target = "_blank"),
+    a(href = "https://coucou.kryeit.com/#/leaderboard", "Leaderboard", class = "link"),
+    a(href = "https://coucou.kryeit.com/#/onlines", "Onlines", class = "link"),
     
   )
 }
