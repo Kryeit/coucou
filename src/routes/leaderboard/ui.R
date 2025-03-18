@@ -12,8 +12,33 @@ leaderboard_ui <- function(id) {
 .selectize-input { border: 1px solid #ced4da; }
 
 .leaderboard-selectors {
-  margin-top: 20px;
-}   
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 15px;
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+.selector-container {
+  flex: 1;
+  max-width: 250px;
+}
+
+.selector-container .control-label {
+  display: none;
+}
+
+.spacer {
+  flex-grow: 1;
+}
+
+.download-btn {
+  margin-top: -15px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
 
 .chart-container {
   margin-top: 20px;
@@ -22,9 +47,9 @@ leaderboard_ui <- function(id) {
   border-radius: 4px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   padding: 10px;
-  overflow: visible !important;  /* Remove any scrolling */
-  height: auto !important;       /* Adjust height automatically */
-  max-height: none !important;   /* Remove max height restriction */
+  overflow: visible !important;
+  height: auto !important;
+  max-height: none !important;
 }
               
 .bar-container {
@@ -74,22 +99,6 @@ leaderboard_ui <- function(id) {
   font-size: 14px;
   font-weight: normal;
   color: #6c757d;
-}
-
-.leaderboard-selectors {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-
-.selector-container {
-  flex: 1;
-  max-width: 250px;
-}
-
-.selector-container .control-label {
-  display: none;
 }
 
 .arrow {
@@ -183,7 +192,11 @@ $(document).ready(function() {
                                    }
                                  }')
                                 ))
-               )
+               ),
+               
+               div(class = "spacer"),
+               
+               downloadButton(ns("download_csv"), "Download CSV", class = "download-btn")
              )
       )
     ),

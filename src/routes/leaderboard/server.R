@@ -155,4 +155,16 @@ leaderboard_server <- function(input, output, session) {
         backgroundColor = 'rgba(240, 240, 240, 0.5)'
       )
   })
+  
+  output$download_csv <- downloadHandler(
+    filename = function() {
+      paste("leaderboard-", input$stat_type, "-", input$item_filter, "-", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      req(player_stats())
+      data <- player_stats()
+      data$rank <- seq_len(nrow(data))
+      write.csv(data[, c("rank", "username", "count", "last_seen")], file, row.names = FALSE)
+    }
+  )
 }
