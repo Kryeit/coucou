@@ -36,35 +36,16 @@ create_bar_chart <- function(data, stat_type, item) {
   # Calculate statistics
   avg_value <- mean(data$count)
   
-  # Set fixed height per bar
-  bar_height <- 0.7
-  bar_spacing <- 1.0
-  
-  # Calculate total plot height needed
+  # Calculate total plot height 
   n_players <- nrow(data)
-  plot_height <- min(n_players * 40 + 150, 500)
   
-  # Create a blank placeholder first to establish axes
-  p <- plot_ly(height = plot_height) %>%
-    # Add invisible scatter points for setting the axes properly
-    add_trace(
-      x = c(0, max(data$count) * 1.1),
-      y = c(0.5, n_players + 0.5),
-      type = "scatter",
-      mode = "markers",
-      marker = list(color = "rgba(0,0,0,0)"),
-      hoverinfo = "none",
-      showlegend = FALSE
-    )
-  
-  # Add bars without text (just showing values)
-  p <- p %>% add_trace(
+  # Create plot with data values
+  p <- plot_ly(
     data = data,
-    y = ~seq_len(n_players),
     x = ~count,
+    y = ~seq_len(n_players),
     type = 'bar',
     orientation = 'h',
-    width = bar_height,
     marker = list(
       color = '#2196F3',
       line = list(color = 'rgba(0,0,0,0.1)', width = 1)
@@ -78,20 +59,17 @@ create_bar_chart <- function(data, stat_type, item) {
       "<extra></extra>"
     ),
     showlegend = FALSE
-  )
-  
-  # Set layout properties
-  p <- p %>% layout(
-    title = list(
-      text = paste(stat_name, "-", formatted_name),
-      font = list(family = "Open Sans", size = 18, color = '#444')
-    ),
+  ) %>% layout(
+    title = "",  # Remove title
+    height = n_players * 40 + 100,  # Dynamic height calculation
     yaxis = list(
       title = "",
-      showticklabels = FALSE,
+      tickmode = "array",
+      tickvals = seq_len(n_players),
+      ticktext = rep("", n_players),  # Empty tick labels
       showgrid = FALSE,
-      range = c(0.5, min(n_players + 0.5, 10.5)),
-      fixedrange = TRUE    # Prevent y-axis panning
+      range = c(0.5, n_players + 0.5),
+      fixedrange = TRUE
     ),
     xaxis = list(
       title = "Count",
@@ -99,12 +77,12 @@ create_bar_chart <- function(data, stat_type, item) {
       gridcolor = 'rgba(0,0,0,0.1)',
       zeroline = TRUE,
       zerolinecolor = 'rgba(0,0,0,0.1)',
-      fixedrange = TRUE    # Prevent x-axis panning
+      fixedrange = TRUE
     ),
     plot_bgcolor = '#FFFFFF',
     paper_bgcolor = '#FFFFFF',
-    margin = list(l = 80, r = 30, b = 50, t = 80, pad = 4),
-    dragmode = FALSE       # Disable all panning/zooming
+    margin = list(l = 80, r = 30, b = 50, t = 30, pad = 4),
+    dragmode = FALSE
   )
   
   # Add player head images as axis labels on the left
@@ -112,7 +90,6 @@ create_bar_chart <- function(data, stat_type, item) {
     username <- data$username[i]
     img_url <- paste0("https://kryeit.com/api/players/", username, "/head")
     
-    # Use a text annotation with a visible box to make the player name show
     p <- p %>% add_annotations(
       x = 0,
       y = i,
@@ -134,30 +111,13 @@ create_bar_chart <- function(data, stat_type, item) {
     )
   }
   
-  # Make plot scrollable if more than 10 players while keeping axes fixed
-  if (n_players > 10) {
-    p <- p %>% layout(
-      yaxis = list(
-        title = "",
-        showticklabels = FALSE,
-        showgrid = FALSE,
-        range = c(0.5, 10.5),
-        fixedrange = TRUE,  # Keep this fixed to prevent unintended scrolling
-        scaleanchor = "x"
-      ),
-      # Add custom scroll behavior using config
-      config = list(
-        scrollZoom = TRUE,
-        displayModeBar = FALSE  # Hide the mode bar entirely
-      )
+  # Remove all config options related to scrolling
+  p <- p %>% layout(
+    config = list(
+      displayModeBar = FALSE,
+      staticPlot = TRUE  # Ensures no interaction and full visibility
     )
-  } else {
-    p <- p %>% layout(
-      config = list(
-        displayModeBar = FALSE  # Hide the mode bar entirely
-      )
-    )
-  }
+  )
   
   return(p)
 }

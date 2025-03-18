@@ -84,21 +84,6 @@ leaderboard_server <- function(input, output, session) {
     entries_text <- paste0("(", nrow(data), " entries)")
     shinyjs::html("entries_count", entries_text)
     
-    stat_name <- switch(input$stat_type,
-                        "minecraft:used" = "Items Used",
-                        "minecraft:broken" = "Items Broken", 
-                        "minecraft:crafted" = "Items Crafted",
-                        "minecraft:mined" = "Items Mined",
-                        "minecraft:killed" = "Mob Kills",
-                        "minecraft:killed_by" = "Deaths By",
-                        "minecraft:custom" = "Custom Stats",
-                        "Unknown")
-    
-    formatted_name <- format_item_name(input$item_filter)
-    
-    header_html <- paste(stat_name, "-", formatted_name)
-    shinyjs::html("chart_header", header_html)
-    
     max_value <- max(data$count)
     avg_value <- mean(data$count)
     
