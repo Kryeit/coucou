@@ -5,18 +5,34 @@ leaderboard_ui <- function(id) {
   ns <- NS(id)
   
   fluidPage(
-    tags$head(
-      tags$style(HTML("
+    tags$style(HTML("
 .well { background-color: #f8f9fa; border: 1px solid #e9ecef; }
 .control-label { font-weight: 400; color: #495057; }
 .selectize-input { border: 1px solid #ced4da; }
+
+.banner-container {
+  width: 100%;
+  text-align: left;
+  margin-bottom: 10px;
+  padding-top: 10px;
+  padding-left: 10px;
+}
+
+.banner-link {
+  display: inline-block;
+}
+
+.banner-image {
+  max-width: 600px;
+  min-height: 80px;
+  image-rendering: pixelated;
+}
 
 .leaderboard-selectors {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-top: 15px;
-  margin-bottom: 15px;
   width: 100%;
 }
 
@@ -38,6 +54,13 @@ leaderboard_ui <- function(id) {
   padding: 8px 10px;
   border-radius: 4px;
   cursor: pointer;
+}
+
+.donation-link {
+  margin-right: 15px;
+  text-decoration: none;
+  display: inline-block;
+  margin-top: -15px; /* Hardcoded pixels to match button position */
 }
 
 .chart-container {
@@ -138,8 +161,7 @@ leaderboard_ui <- function(id) {
   overflow: hidden;
   transition: max-height 0.3s ease-out;
 }
-      "))
-    ),
+    ")),
     
     tags$script(HTML("
 $(document).ready(function() {
@@ -156,7 +178,13 @@ $(document).ready(function() {
     }
   });
 });
-")),
+    ")),
+    
+    div(class = "banner-container",
+        a(href = "https://coucou.kryeit.com", class = "banner-link",
+          img(src = "assets/banner.png", class = "banner-image", alt = "Kryeit Banner")
+        )
+    ),
     
     fluidRow(
       column(12,
@@ -195,6 +223,8 @@ $(document).ready(function() {
                ),
                
                div(class = "spacer"),
+               
+               a(href = "https://ko-fi.com/kryeit", "Donation Link", class = "donation-link", target = "_blank"),
                
                downloadButton(ns("download_csv"), "Download CSV", class = "download-btn")
              )

@@ -1,7 +1,6 @@
 library(shiny)
 library(shinyjs)
 
-
 options(shiny.port = 6968)
 
 source("routes/onlines/ui.R")
@@ -10,6 +9,9 @@ source("routes/onlines/server.R")
 source("routes/leaderboard/ui.R")
 source("routes/leaderboard/server.R")
 
+# Configure static file serving for assets directory
+addResourcePath("assets", "assets")
+
 home_ui <- function() {
   fluidPage(
     h1("Coucou! (Named by Tess_, Developed by Muri)")
@@ -17,6 +19,9 @@ home_ui <- function() {
 }
 
 ui <- fluidPage(
+  tags$head(
+    tags$link(rel = "shortcut icon", href = "assets/icon.png")
+  ),
   useShinyjs(),
   uiOutput("page")
 )
