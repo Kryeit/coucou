@@ -1,8 +1,10 @@
+<img src="https://github.com/Kryeit/coucou/blob/main/src/assets/example.png" alt=""/>
+
 # [Coucou](https://coucou.kryeit.com) Statistics portal
 
 [R 4.4.3](https://cran.r-project.org) + [Shiny](https://shiny.posit.co)
-<img src="https://github.com/Kryeit/coucou/blob/main/src/assets/example.png" alt=""/>
-And as always with R, the endless list of libraries:
+
+R libraries:
 - [ShinyJs](https://deanattali.com/shinyjs/)
 - [GGPlot2](https://ggplot2.tidyverse.org)
 - [Plotly](https://plotly.com/r/)
