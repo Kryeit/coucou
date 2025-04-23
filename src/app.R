@@ -3,6 +3,9 @@ library(shinyjs)
 
 options(shiny.port = 6968)
 
+source("routes/home/ui.R")
+source("header.R")
+
 source("routes/onlines/ui.R")
 source("routes/onlines/server.R")
 source("routes/leaderboard/ui.R")
@@ -10,25 +13,8 @@ source("routes/leaderboard/server.R")
 
 addResourcePath("assets", "assets")
 
-home_ui <- function() {
-  fluidPage(
-    div(class = "banner-container",
-        a(href = "https://coucou.kryeit.com",
-          img(src = "assets/banner.png", class = "banner-image", alt = "Kryeit Banner")
-        )
-    ),
-    a(href = "https://coucou.kryeit.com/#/leaderboard", "Leaderboard", class = "link"),
-    a(href = "https://coucou.kryeit.com/#/onlines", "Onlines", class = "link"),
-    
-  )
-}
-
 ui <- fluidPage(
-  tags$head(
-    tags$title("Coucou"),
-    tags$link(rel = "shortcut icon", href = "assets/icon.png"),
-    tags$link(rel = "stylesheet", type = "text/css", href = "assets/main.css")
-  ),
+  header_ui(),
   useShinyjs(),
   uiOutput("page")
 )
@@ -80,16 +66,13 @@ server <- function(input, output, session) {
   
   output$page <- renderUI({
     path <- current_path()
-    if (path == "" || path == "#/") {
-      home_ui()
-    } else if (path == "#/onlines") {
+    
+    if (path == "#/onlines") {
       onlines_ui("onlines_module")
     } else if (path == "#/leaderboard") {
       leaderboard_ui("leaderboard_module")
     } else {
-      fluidPage(
-        h1("404 Not Found")
-      )
+      home_ui()
     }
   })
   
@@ -102,4 +85,4 @@ server <- function(input, output, session) {
   })
 }
 
-shinyApp(ui = ui, server = server)
+shinyApp(ui, server)
