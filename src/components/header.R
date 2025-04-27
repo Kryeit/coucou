@@ -1,7 +1,16 @@
 header_ui <- function() {
-  tags$head(
-    tags$title("Coucou"),
-    tags$link(rel = "shortcut icon", href = "assets/icon.png"),
-    tags$link(rel = "stylesheet", type = "text/css", href = "assets/main.css")
+  fluidPage(
+    # Clickable image that routes to home
+    a(href = route_link("/"),
+      img(src = "assets/banner.png", alt = "Kryeit Banner")
+    ),
+    
+    # TabsetPanel at the bottom
+    tabsetPanel(
+      navbarMenu("Graphs",
+                 tabPanel("1"),
+                 tabPanel("2")
+      )
+    )
   )
 }
