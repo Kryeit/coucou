@@ -3,8 +3,9 @@ library(shinyjs)
 
 options(shiny.port = 6968)
 
+source("components/header.R")
+
 source("routes/home/ui.R")
-source("header.R")
 
 source("routes/onlines/ui.R")
 source("routes/onlines/server.R")
