@@ -1,5 +1,6 @@
 library(shiny)
 library(shiny.router)
+library(shiny.tailwind)
 
 options(shiny.port = 6968)
 
@@ -13,12 +14,12 @@ source_folder("routes/home")
 source_folder("routes/onlines")
 source_folder("routes/leaderboard")
 
-production <- FALSE
-URL_COUCOU <- if (production) "https://coucou.kryeit.com" else "http://localhost:6968"
-
 addResourcePath("assets", "assets")
 
 ui <- fluidPage(
+  use_tailwind(),
+  includeCSS("assets/main.css"),
+  
   header_ui(),
   router_ui(
     route("/", home_ui()),
