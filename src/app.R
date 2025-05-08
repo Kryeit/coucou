@@ -20,16 +20,36 @@ ui <- fluidPage(
   use_tailwind(),
   includeCSS("assets/main.css"),
   
-  header_ui(),
-  router_ui(
-    route("/", home_ui()),
-    route("leaderboard", leaderboard_ui()),
-    route("onlines", onlines_ui())
+  div(
+    class = "min-h-screen flex flex-col",
+    header_ui(),
+    
+    tags$main(class = "flex-grow",
+              router_ui(
+                route("/", home_ui()),
+                route("onlines", onlines_ui()),
+                route("leaderboard", leaderboard_ui("leaderboard"))
+              )
+    ),
+    
+    footer_ui()
   )
 )
 
 server <- function(input, output, session) {
-  router_server()
+  header_server(input, output, session)
+  router_server(root_page = "/")
+
+  observe({
+    header_server(input, output, session, current_route = get_page())
+
+    if (get_page() == "onlines") {
+      onlines_server(input, output, session)
+    } else if (get_page() == "leaderboard") {
+      moduleServer("leaderboard", leaderboard_server)
+    }
+  })
+  
 }
 
 shinyApp(ui, server)

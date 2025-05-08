@@ -6,3 +6,8 @@
 body {
   font-family: 'Minecraftia', sans-serif;
 }
+
+img {
+  image-rendering: pixelated
+}
+

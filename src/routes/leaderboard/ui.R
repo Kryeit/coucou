@@ -1,4 +1,4 @@
-stat_type_choices <- c(
+category_choices <- c(
   "Custom" = "minecraft:custom", 
   "Items Used" = "minecraft:used",
   "Items Broken" = "minecraft:broken",
@@ -8,23 +8,27 @@ stat_type_choices <- c(
   "Deaths" = "minecraft:killed_by"
 )
 
-leaderboard_ui <- function() {
-  ns <- NS("leaderboard_module")
+leaderboard_ui <- function(id) {
+  ns <- NS(id)
   
   fluidPage(
+    h1("Minecraft stats JSON"),
     fluidRow(
-      column(12,
-             selectInput(ns("stat_type"), "Leaderboards:", choices = stat_type_choices),
-             selectizeInput(ns("item_filter"), "Item:", choices = NULL, 
-                            options = list(placeholder = 'Select an item', maxOptions = 10000)),
-             downloadButton(ns("download_csv"), "Download CSV"),
-             actionButton(ns("copy_share_link"), "Share", icon = icon("share-alt"))
+      column(4,
+             selectInput(ns("category"), "Category:", choices = category_choices)
+      ),
+      column(4,
+             selectizeInput(ns("identifier"), "Identifier:", choices = NULL, 
+                            options = list(placeholder = 'Select an item', maxOptions = 10000))
+      ),
+      column(2),
+      column(2,
+             div(
+               downloadButton(ns("download_csv"), ""),
+               actionButton(ns("copy_link"), "", icon = icon("share-alt"))
+             )
       )
     ),
-    fluidRow(
-      column(12,
-             DT::dataTableOutput(ns("leaderboard_table"))
-      )
-    )
+    plotOutput("plot")
   )
 }

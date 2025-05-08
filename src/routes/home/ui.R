@@ -1,4 +1,13 @@
 home_ui <- function() {
 
-  h1("Kryeit Statistics", class = "text-5xl font-bold underline text-center")
+  fluidPage(
+    class = "text-center",
+    h1("Kryeit Statistics", class = "text-5xl font-bold underline mb-6"),
+    p(
+      "A variety of graphs with up to date information about the players!"
+    ),
+    p(
+      "If you wish to opt out, reach out via email."
+    )
+  )
 }
