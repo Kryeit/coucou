@@ -1,7 +1,7 @@
 source("api/gerente.R")
+library(plotly)
 
-DISPLAY_LIMIT <- 50L       # players shown in the on-screen leaderboard
-PLOT_LIMIT    <- 25L       # bars in the downloadable PNG chart
+DISPLAY_LIMIT <- 40L       # players shown in the chart
 CSV_LIMIT     <- 100000L   # rows pulled for a CSV export
 
 `%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || !nzchar(a)) b else a
@@ -14,9 +14,7 @@ format_identifier <- function(item) {
 }
 
 # Named choices for the item dropdown: label is the item id alone, but keeps the
-# "namespace:" prefix when the same item id appears under more than one namespace
-# (e.g. minecraft:stone vs create:stone). Order is left untouched; values stay
-# the full keys.
+# "namespace:" prefix when the same item id appears under more than one namespace.
 label_choices <- function(keys) {
   if (length(keys) == 0) return(character(0))
   items <- sub("^[^:]*:", "", keys)
@@ -24,50 +22,45 @@ label_choices <- function(keys) {
   stats::setNames(keys, ifelse(conflicted, keys, items))
 }
 
-# Display a count nicely: keep the API's formatted value when it has a unit
-# (e.g. "3,261 h"), otherwise group the raw number with commas.
-display_value <- function(value, formatted) {
-  if (length(formatted) && !is.na(formatted) && grepl("[A-Za-z]", formatted)) formatted
-  else formatC(value, format = "f", big.mark = ",", digits = 0)
-}
+# Horizontal plotly bar chart of the top players. Player heads are web images
+# placed at a fixed x (so they line up), kept square via sizing = "contain".
+build_plotly <- function(df, label) {
+  df <- utils::head(df, DISPLAY_LIMIT)
+  df <- df[order(df$value), ]                      # largest ends up on top
+  df$hover <- sprintf("<b>%s</b><br>%s", df$name, df$formattedValue)
+  uuids <- as.character(df$uuid)
+  df$name <- factor(df$name, levels = df$name)     # keep order on the y axis
+  n <- nrow(df)
 
-# One leaderboard row: rank, head (aligned column), name, bar, value.
-lb_row <- function(rank, name, uuid, value, formatted, maxv) {
-  pct <- if (maxv > 0) max(2, value / maxv * 100) else 2
-  div(
-    class = "flex items-center gap-3 py-1.5 px-2",
-    span(class = "w-6 shrink-0 text-right text-sm text-slate-400", rank),
-    img(class = "w-7 h-7 shrink-0 pixelated rounded-sm bg-slate-100",
-        src = player_head_url(uuid), loading = "lazy", alt = name),
-    span(class = "w-24 sm:w-40 shrink-0 truncate text-slate-800", name),
-    div(class = "flex-1 h-2.5 rounded bg-slate-100 overflow-hidden",
-        div(class = "h-full bg-grass-500", style = sprintf("width:%.1f%%;", pct))),
-    span(class = "w-24 shrink-0 text-right text-xs sm:text-sm tabular-nums text-slate-600",
-         display_value(value, formatted))
-  )
-}
+  heads <- lapply(seq_len(n), function(i) list(
+    source = player_head_url(uuids[i]),
+    xref = "paper", yref = "y", x = -0.012, y = i - 1,
+    sizex = 0.07, sizey = 0.92, xanchor = "right", yanchor = "middle",
+    sizing = "contain", layer = "above"
+  ))
 
-# Horizontal bar chart of the top players, for the downloadable PNG. Base
-# graphics, no extra dependencies.
-build_plot <- function(df, label) {
-  df <- utils::head(df, PLOT_LIMIT)
-  df <- df[order(df$value), ]                       # largest ends up on top
-  op <- par(mar = c(4, 9, 3, 3), font.main = 1, cex.main = 1.2)
-  on.exit(par(op))
-  bp <- barplot(df$value, names.arg = df$name, horiz = TRUE, las = 1,
-                col = "#539b32", border = NA, main = label,
-                cex.names = 0.85, xlim = c(0, max(df$value) * 1.13))
-  text(df$value, bp, labels = df$formattedValue, pos = 4,
-       cex = 0.8, col = "#334155", xpd = TRUE)
-  invisible(bp)
+  plot_ly(df, x = ~value, y = ~name, type = "bar", orientation = "h",
+          height = max(420, n * 26 + 130),
+          marker = list(color = "#539b32"),
+          hovertext = ~hover, hoverinfo = "text") %>%
+    layout(
+      title = list(text = label, x = 0, xanchor = "left", font = list(size = 16)),
+      font = list(family = "Minecraftia, monospace", size = 12, color = "#0f172a"),
+      margin = list(l = 60, r = 28, t = 56, b = 36),
+      xaxis = list(title = "", zeroline = FALSE, gridcolor = "#eef2f6", fixedrange = TRUE),
+      yaxis = list(title = "", showticklabels = FALSE, fixedrange = TRUE),
+      images = heads, bargap = 0.3,
+      paper_bgcolor = "white", plot_bgcolor = "white"
+    ) %>%
+    config(displaylogo = FALSE,
+           modeBarButtonsToRemove = list("lasso2d", "select2d", "zoom2d",
+                                         "pan2d", "zoomIn2d", "zoomOut2d", "autoScale2d"))
 }
 
 leaderboard_server <- function(input, output, session) {
   # Holds a link-restored item to select once its namespace's items load.
   pending_identifier <- reactiveVal(NULL)
 
-  # Fetch a namespace's keys into the item dropdown. Pass select = NULL to
-  # leave nothing pre-selected (empty string clears the selectize).
   load_items <- function(cat, select = NULL) {
     if (is.null(cat) || !nzchar(cat)) return(invisible())
     keys <- fetch_keys(cat)
@@ -76,7 +69,6 @@ leaderboard_server <- function(input, output, session) {
                          choices = label_choices(keys), selected = sel)
   }
 
-  # Repopulate items whenever the namespace changes (no pre-selection).
   observeEvent(input$category, {
     req(input$category)
     pend <- isolate(pending_identifier())
@@ -114,18 +106,11 @@ leaderboard_server <- function(input, output, session) {
     paste0(cat_label, " / ", format_identifier(input$identifier))
   })
 
-  output$leaderboard <- renderUI({
+  output$plot <- renderPlotly({
     req(nzchar(input$identifier %||% ""))
     df <- leaderboard_data()
     req(df)
-    maxv <- max(df$value, na.rm = TRUE)
-    rows <- lapply(seq_len(nrow(df)), function(i) {
-      lb_row(i, df$name[i], df$uuid[i], df$value[i], df$formattedValue[i], maxv)
-    })
-    tagList(
-      div(class = "px-2 pb-3 text-sm font-semibold text-slate-700", stat_label()),
-      div(class = "divide-y divide-slate-50", rows)
-    )
+    build_plotly(df, stat_label())
   })
 
   # Buttons only render once there's data, so you can't trigger an empty export.
@@ -133,22 +118,27 @@ leaderboard_server <- function(input, output, session) {
     if (!nzchar(input$identifier %||% "")) return(NULL)
     if (is.null(leaderboard_data())) return(NULL)
     ns <- session$ns
-    outline <- paste(
-      "!inline-flex !items-center !justify-center !gap-2 !rounded-lg !px-3 !py-2 !flex-1",
-      "!text-xs sm:!text-sm !font-semibold !text-slate-700 !bg-white !border",
-      "!border-slate-300 hover:!bg-slate-50 !shadow-none !cursor-pointer"
-    )
     div(
       class = "flex gap-2",
-      downloadButton(ns("download_csv"), "CSV", class = outline),
-      downloadButton(ns("download_png"), "PNG", class = outline),
+      downloadButton(ns("download_csv"), "CSV", class = paste(
+        "!inline-flex !items-center !justify-center !gap-2 !rounded-lg !px-3 !py-2 !flex-1",
+        "!text-xs sm:!text-sm !font-semibold !text-slate-700 !bg-white !border",
+        "!border-slate-300 hover:!bg-slate-50 !shadow-none !cursor-pointer")),
       tags$button(
-        "Copy link", type = "button", onclick = "coucouCopyLink(this)",
+        type = "button", onclick = "coucouShare(this)",
         class = paste(
-          "inline-flex items-center justify-center rounded-lg px-3 py-2 flex-1",
+          "inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 flex-1",
           "text-xs sm:text-sm font-semibold text-white bg-slate-800",
-          "hover:bg-slate-900 cursor-pointer"
-        )
+          "hover:bg-slate-900 cursor-pointer"),
+        HTML(paste0(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" ',
+          'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ',
+          'stroke-linecap="round" stroke-linejoin="round">',
+          '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/>',
+          '<circle cx="18" cy="19" r="3"/>',
+          '<line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>',
+          '<line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>')),
+        "Share"
       )
     )
   })
@@ -169,20 +159,6 @@ leaderboard_server <- function(input, output, session) {
                    value = df$value, formatted = df$formattedValue)
       }
       write.csv(out, file, row.names = FALSE)
-    }
-  )
-
-  output$download_png <- downloadHandler(
-    filename = function() {
-      sprintf("leaderboard-%s-%s.png",
-              gsub("[^a-z0-9]+", "_", input$identifier %||% "stat"), Sys.Date())
-    },
-    content = function(file) {
-      df <- leaderboard_data()
-      req(df)
-      png(file, width = 1000, height = 700, res = 120)
-      on.exit(dev.off())
-      build_plot(df, isolate(stat_label()))
     }
   )
 }

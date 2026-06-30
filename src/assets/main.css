@@ -101,6 +101,11 @@ img.pixelated,
   color: #264019;                            /* grass-900 */
 }
 
+/* Scrolling the item list shouldn't scroll the page once it bottoms out. */
+.selectize-dropdown-content {
+  overscroll-behavior: contain;
+}
+
 .control-label {
   font-weight: 600;
   font-size: 0.8rem;

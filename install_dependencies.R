@@ -2,5 +2,6 @@ install.packages(c(
   "shiny",
   "shiny.router",
   "shiny.tailwind",
-  "jsonlite"
+  "jsonlite",
+  "plotly"
 ))

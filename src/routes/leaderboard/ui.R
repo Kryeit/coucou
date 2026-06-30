@@ -12,7 +12,7 @@ leaderboard_ui <- function(id) {
   ns <- NS(id)
 
   div(
-    # Copy the current selection's share link, flashing the button for feedback.
+    # Share the current selection: native share sheet on mobile, copy on desktop.
     tags$script(HTML(paste(
       "function coucouFallbackCopy(text){",
       "  var ta = document.createElement('textarea');",
@@ -21,18 +21,23 @@ leaderboard_ui <- function(id) {
       "  try { document.execCommand('copy'); } catch (e) {}",
       "  document.body.removeChild(ta);",
       "}",
-      "function coucouCopyLink(btn){",
+      "function coucouFlash(btn){",
+      "  var html = btn.innerHTML; btn.innerHTML = 'Copied!';",
+      "  setTimeout(function(){ btn.innerHTML = html; }, 1000);",
+      "}",
+      "function coucouShare(btn){",
       "  var cat = (document.getElementById('leaderboard-category')   || {}).value || '';",
       "  var id  = (document.getElementById('leaderboard-identifier') || {}).value || '';",
       "  if (!id) return;",
       "  var url = window.location.origin + window.location.pathname +",
       "            '#!/leaderboard?category=' + encodeURIComponent(cat) +",
       "            '&identifier=' + encodeURIComponent(id);",
-      "  var flash = function(){ btn.textContent = 'Copied!';",
-      "    setTimeout(function(){ btn.textContent = 'Copy link'; }, 1000); };",
-      "  if (navigator.clipboard && navigator.clipboard.writeText) {",
-      "    navigator.clipboard.writeText(url).then(flash).catch(function(){ coucouFallbackCopy(url); flash(); });",
-      "  } else { coucouFallbackCopy(url); flash(); }",
+      "  if (navigator.share) {",
+      "    navigator.share({ title: 'Kryeit stats', url: url }).catch(function(){});",
+      "  } else if (navigator.clipboard && navigator.clipboard.writeText) {",
+      "    navigator.clipboard.writeText(url).then(function(){ coucouFlash(btn); })",
+      "      .catch(function(){ coucouFallbackCopy(url); coucouFlash(btn); });",
+      "  } else { coucouFallbackCopy(url); coucouFlash(btn); }",
       "}",
       sep = "\n"
     ))),
@@ -73,12 +78,12 @@ leaderboard_ui <- function(id) {
         )
       ),
 
-      # Leaderboard (only shown once an item is picked)
+      # Leaderboard chart (only shown once an item is picked)
       conditionalPanel(
         condition = sprintf("input['%s']", ns("identifier")),
         div(
-          class = "px-2 sm:px-4 py-4 max-h-[70vh] overflow-y-auto",
-          uiOutput(ns("leaderboard"))
+          class = "px-2 sm:px-4 py-4",
+          plotlyOutput(ns("plot"), height = "auto")
         )
       )
     )
