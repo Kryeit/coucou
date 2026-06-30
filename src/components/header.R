@@ -11,10 +11,10 @@ header_ui <- function() {
         class = "shrink-0 flex items-center gap-3",
         img(
           src = "assets/icon.png",
-          class = "h-10 w-10 pixelated",
+          class = "h-8 w-8 pixelated",
           alt = "Coucou"
         ),
-        span(class = "font-mc text-2xl text-slate-900", "COUCOU")
+        span(class = "font-mc text-lg sm:text-xl text-slate-900", "COUCOU")
       ),
       tags$nav(
         class = "ml-auto flex items-center gap-1 sm:gap-2",
@@ -23,7 +23,7 @@ header_ui <- function() {
           href = "https://ko-fi.com/kryeit",
           target = "_blank", rel = "noopener",
           class = paste(
-            "ml-1 sm:ml-2 inline-flex items-center rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2",
+            "ml-1 sm:ml-2 mr-4 inline-flex items-center rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2",
             "text-xs sm:text-sm font-semibold text-white bg-grass-500 hover:bg-grass-600",
             "transition-colors"
           ),

@@ -12,32 +12,27 @@ leaderboard_ui <- function(id) {
   ns <- NS(id)
 
   div(
-    # html2canvas: used to snapshot the leaderboard to a PNG.
-    tags$script(src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),
-    # Clipboard helper (with execCommand fallback) + PNG download.
+    # Copy the current selection's share link, flashing the button for feedback.
     tags$script(HTML(paste(
-      "Shiny.addCustomMessageHandler('copy_share_link', function(q){",
-      "  var url = window.location.origin + window.location.pathname + '#!/leaderboard?' + q;",
-      "  if (navigator.clipboard && navigator.clipboard.writeText) {",
-      "    navigator.clipboard.writeText(url).catch(function(){ coucouCopyFallback(url); });",
-      "  } else { coucouCopyFallback(url); }",
-      "});",
-      "function coucouCopyFallback(text){",
+      "function coucouFallbackCopy(text){",
       "  var ta = document.createElement('textarea');",
       "  ta.value = text; ta.style.position = 'fixed'; ta.style.top = '-1000px';",
       "  document.body.appendChild(ta); ta.focus(); ta.select();",
       "  try { document.execCommand('copy'); } catch (e) {}",
       "  document.body.removeChild(ta);",
       "}",
-      "function coucouDownloadPng(){",
-      "  var el = document.getElementById('leaderboard-leaderboard');",
-      "  if (!el || typeof html2canvas === 'undefined') return;",
-      "  html2canvas(el, {backgroundColor: '#ffffff', useCORS: true, scale: 2}).then(function(canvas){",
-      "    var a = document.createElement('a');",
-      "    a.download = 'leaderboard.png';",
-      "    a.href = canvas.toDataURL('image/png');",
-      "    a.click();",
-      "  });",
+      "function coucouCopyLink(btn){",
+      "  var cat = (document.getElementById('leaderboard-category')   || {}).value || '';",
+      "  var id  = (document.getElementById('leaderboard-identifier') || {}).value || '';",
+      "  if (!id) return;",
+      "  var url = window.location.origin + window.location.pathname +",
+      "            '#!/leaderboard?category=' + encodeURIComponent(cat) +",
+      "            '&identifier=' + encodeURIComponent(id);",
+      "  var flash = function(){ btn.textContent = 'Copied!';",
+      "    setTimeout(function(){ btn.textContent = 'Copy link'; }, 1000); };",
+      "  if (navigator.clipboard && navigator.clipboard.writeText) {",
+      "    navigator.clipboard.writeText(url).then(flash).catch(function(){ coucouFallbackCopy(url); flash(); });",
+      "  } else { coucouFallbackCopy(url); flash(); }",
       "}",
       sep = "\n"
     ))),
@@ -60,28 +55,29 @@ leaderboard_ui <- function(id) {
           class = "sm:col-span-4",
           selectizeInput(
             ns("category"), "Category", choices = category_choices,
-            selected = "minecraft:custom", width = "100%",
-            options = list(dropdownParent = "body")
+            selected = "minecraft:custom", width = "100%"
           )
         ),
         div(
           class = "sm:col-span-4",
           selectizeInput(
             ns("identifier"), "Item", choices = NULL, width = "100%",
-            options = list(placeholder = "Select an item", maxOptions = 1000)
+            options = list(placeholder = "Select an item", maxOptions = 2000)
           )
         ),
         div(
           class = "sm:col-span-4",
-          # Buttons only render when there's data to act on (see server).
           uiOutput(ns("actions"))
         )
       ),
 
-      # Results
-      div(
-        class = "px-3 sm:px-4 py-4",
-        uiOutput(ns("leaderboard"))
+      # Chart (only shown once an item is picked)
+      conditionalPanel(
+        condition = sprintf("input['%s']", ns("identifier")),
+        div(
+          class = "px-3 sm:px-5 py-4",
+          plotOutput(ns("plot"), height = "560px")
+        )
       )
     )
   )

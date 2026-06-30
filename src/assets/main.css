@@ -38,7 +38,7 @@ img.pixelated,
   box-shadow: none !important;
   min-height: 2.5rem;
   padding: 0.5rem 0.75rem !important;
-  font-size: 0.95rem;
+  font-size: 16px;            /* >=16px stops iOS Safari zooming on focus */
   color: #0f172a;
   background-color: #ffffff;
   transition: border-color .15s ease, box-shadow .15s ease;
@@ -67,6 +67,15 @@ img.pixelated,
 .selectize-input {
   display: flex !important;
   align-items: center;
+  overflow: hidden;          /* clip a long selected value instead of spilling out */
+}
+
+/* Truncate a long selected item (e.g. a long stat key) with an ellipsis. */
+.selectize-input > .item {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .selectize-input > input {
@@ -76,6 +85,7 @@ img.pixelated,
   box-shadow: none !important;
   background: transparent !important;
   min-height: 0 !important;
+  font-size: 16px;           /* keep the typing field at >=16px too (iOS) */
 }
 
 .selectize-dropdown {
