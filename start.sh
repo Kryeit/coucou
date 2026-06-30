@@ -3,7 +3,7 @@
 # Configuration
 APP_DIR="/var/www/html/coucou/src"  # Directory containing app.R
 LOG_FILE="app.log"  # Log file for app output
-REQUIRED_PACKAGES=("shiny" "shiny.router" "shiny.tailwind" "jsonlite" "plotly")  # List of required R packages
+REQUIRED_PACKAGES=("shiny" "shiny.router" "shiny.tailwind" "jsonlite")  # List of required R packages
 
 echo "Installing system dependencies..."
 sudo apt update

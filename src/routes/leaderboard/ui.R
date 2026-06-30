@@ -78,12 +78,12 @@ leaderboard_ui <- function(id) {
         )
       ),
 
-      # Leaderboard chart (only shown once an item is picked)
+      # Leaderboard (only shown once an item is picked)
       conditionalPanel(
         condition = sprintf("input['%s']", ns("identifier")),
         div(
           class = "px-2 sm:px-4 py-4",
-          plotlyOutput(ns("plot"), height = "auto")
+          uiOutput(ns("leaderboard"))
         )
       )
     )
