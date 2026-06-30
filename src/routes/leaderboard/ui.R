@@ -38,7 +38,11 @@ leaderboard_ui <- function(id) {
         class = "px-5 sm:px-6 py-4 grid grid-cols-1 sm:grid-cols-12 gap-4 items-end bg-slate-50/60",
         div(
           class = "sm:col-span-4",
-          selectInput(ns("category"), "Category", choices = category_choices, width = "100%")
+          selectizeInput(
+            ns("category"), "Category", choices = category_choices,
+            selected = "minecraft:custom", width = "100%",
+            options = list(dropdownParent = "body")
+          )
         ),
         div(
           class = "sm:col-span-5",

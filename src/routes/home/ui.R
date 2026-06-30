@@ -7,17 +7,8 @@ home_ui <- function() {
       alt = "Kryeit"
     ),
     h1(
-      class = "font-mc text-3xl sm:text-5xl text-slate-900 mb-4 leading-tight",
+      class = "font-mc text-3xl sm:text-5xl text-slate-900 mb-8 leading-tight",
       "Kryeit Statistics"
-    ),
-    p(
-      class = "max-w-xl text-base sm:text-lg text-slate-600 mb-2",
-      "Live leaderboards built from every player's in-game stats."
-    ),
-    p(
-      class = "max-w-xl text-sm text-slate-500 mb-8",
-      "Pick a category and an item to see who's on top. ",
-      "Want out? Reach out via email and we'll remove you."
     ),
     a(
       href = route_link("leaderboard"),

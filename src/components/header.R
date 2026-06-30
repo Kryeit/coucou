@@ -8,12 +8,13 @@ header_ui <- function() {
       class = "w-full max-w-5xl mx-auto px-4 sm:px-6 flex items-center gap-4 h-20",
       a(
         href = route_link("/"),
-        class = "shrink-0",
+        class = "shrink-0 flex items-center gap-3",
         img(
-          src = "assets/banner.png",
-          class = "h-12 sm:h-14 object-contain pixelated",
-          alt = "Kryeit"
-        )
+          src = "assets/icon.png",
+          class = "h-10 w-10 pixelated",
+          alt = "Coucou"
+        ),
+        span(class = "font-mc text-2xl text-slate-900", "COUCOU")
       ),
       tags$nav(
         class = "ml-auto flex items-center gap-1 sm:gap-2",

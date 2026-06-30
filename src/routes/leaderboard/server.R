@@ -37,8 +37,7 @@ bar_class <- function(rank) {
 
 lb_placeholder <- function(msg) {
   div(
-    class = "flex flex-col items-center justify-center text-center py-16 px-6",
-    div(class = "text-4xl mb-3 opacity-70", HTML("&#127942;")),  # trophy
+    class = "flex items-center justify-center text-center py-16 px-6",
     p(class = "text-slate-500", msg)
   )
 }
@@ -83,7 +82,7 @@ leaderboard_server <- function(input, output, session) {
     if (is.null(q_cat) && is.null(q_id)) return()
     restored(TRUE)
     if (!is.null(q_cat) && q_cat %in% category_choices) {
-      updateSelectInput(session, "category", selected = q_cat)
+      updateSelectizeInput(session, "category", selected = q_cat)
     }
     if (!is.null(q_id)) pending_identifier(q_id)
   })
@@ -113,7 +112,7 @@ leaderboard_server <- function(input, output, session) {
 
   output$leaderboard <- renderUI({
     if (is.null(input$identifier) || !nzchar(input$identifier)) {
-      return(lb_placeholder("Pick an item above to see who's on top."))
+      return(NULL)
     }
     df <- leaderboard_data()
     if (is.null(df)) {
@@ -124,7 +123,7 @@ leaderboard_server <- function(input, output, session) {
     max_count <- max(df$value, na.rm = TRUE)
 
     cat_label  <- names(category_choices)[match(input$category, category_choices)]
-    stat_label <- paste0(cat_label, " · ", format_identifier(input$identifier))
+    stat_label <- paste0(cat_label, " / ", format_identifier(input$identifier))
 
     rows <- lapply(seq_len(n), function(i) {
       lb_row(

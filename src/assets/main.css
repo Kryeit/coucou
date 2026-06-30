@@ -5,11 +5,20 @@
   font-display: swap;
 }
 
-/* Readable system sans for body/data; Minecraftia is used as an accent
-   (via the `font-mc` utility) on the brand and big headings only. */
+/* Minecraftia everywhere, including form controls (which don't inherit by
+   default). */
+body,
+button,
+input,
+select,
+textarea,
+.form-control,
+.selectize-input,
+.selectize-dropdown {
+  font-family: 'Minecraftia', ui-monospace, monospace;
+}
+
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
   background-color: #f8fafc;          /* slate-50 */
   color: #0f172a;                      /* slate-900 */
 }
@@ -40,6 +49,33 @@ img.pixelated,
   border-color: #6fb84b !important;          /* grass-400 */
   box-shadow: 0 0 0 3px rgba(83, 155, 50, .18) !important;
   outline: none;
+}
+
+/* selectize wraps its control in a div that shiny also tags `.form-control`,
+   which gave a doubled box. Strip the wrapper so only `.selectize-input` shows
+   the border, and keep the value vertically centred like a native select. */
+.selectize-control,
+.selectize-control.form-control {
+  border: 0 !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.selectize-input {
+  display: flex !important;
+  align-items: center;
+}
+
+.selectize-input > input {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  min-height: 0 !important;
 }
 
 .selectize-dropdown {

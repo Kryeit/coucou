@@ -7,7 +7,7 @@ footer_ui <- function() {
         "flex flex-col sm:flex-row items-center justify-between gap-2",
         "text-sm text-slate-500"
       ),
-      span(HTML("&copy; Kryeit — player statistics")),
+      span(HTML("&copy; Kryeit")),
       tags$nav(
         class = "flex items-center gap-4",
         a(href = "https://kryeit.com/about", target = "_blank", rel = "noopener",
