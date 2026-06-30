@@ -1,2 +1,6 @@
-install.packages(c("shiny", "shinyjs", "ggplot2", "plotly", "DBI", "RClickhouse",
-                   "RPostgres", "htmltools", "DT", "jsonlite", "pool"))
+install.packages(c(
+  "shiny",
+  "shiny.router",
+  "shiny.tailwind",
+  "jsonlite"
+))

@@ -1,71 +1,185 @@
-library(dplyr)
-library(DT)
-library(ggplot2)
+source("api/gerente.R")
 
-source("db/postgres.R")
-source("routes/leaderboard/graph.R")
+DISPLAY_LIMIT <- 100L      # rows shown in the UI
+CSV_LIMIT     <- 100000L   # rows pulled for a CSV export
 
-format_player_with_head <- function(username) {
-  img_url <- paste0("https://kryeit.com/api/players/", username, "/head")
-  img_tag <- tags$img(src = img_url, class = "dt-player-head", alt = username)
-  return(as.character(tagList(img_tag, username)))
+# ---- small presentation helpers ----------------------------------------- #
+
+fmt_num <- function(x) formatC(x, format = "f", big.mark = ",", digits = 0)
+
+# "minecraft:diamond_ore" -> "Diamond Ore"
+format_identifier <- function(item) {
+  name <- sub("^[^:]*:", "", item)
+  name <- gsub("[._]", " ", name)
+  gsub("(^|[[:space:]])([[:alpha:]])", "\\1\\U\\2", name, perl = TRUE)
 }
 
-leaderboard_server <- function(input, output, session) {
-  ns <- session$ns
-  
-  observeEvent(input$category, {
-    req(input$category)
-    
-    sql <- "
-      SELECT DISTINCT key as item, SPLIT_PART(key, ':', 2) as sort_key
-      FROM users, jsonb_object_keys(stats->'stats'->$1) key
-      WHERE stats->'stats'->$1 IS NOT NULL
-      ORDER BY sort_key
-    "
-    items <- safe_query(sql, input$category)
-    updateSelectizeInput(session, "identifier", choices = items$item, server = TRUE)
-  }, priority = 10)
-  
-  player_stats <- reactive({
-    req(input$category, input$identifier)
-    sql <- "
-      SELECT 
-        username,
-        (stats->'stats'->$1->>$2)::numeric as count,
-        last_seen
-      FROM users
-      WHERE 
-        stats->'stats'->$1 ? $2
-        AND (stats->'stats'->$1->>$2)::numeric > 0
-      ORDER BY (stats->'stats'->$1->>$2)::numeric DESC
-    "
-    result <- safe_query(sql, input$category, input$identifier)
-    if (!is.null(result) && nrow(result) > 0) {
-      result$count <- as.numeric(result$count)
-      result
-    } else {
-      NULL
-    }
-  })
-  
-  output$plot <- renderPlot({
-    df <- player_stats()
-    req(df)
-    ggplot(df, aes(x = count)) +
-      geom_bar() +
-      labs(x = "Stat value", y = "Frequency")
-  })
-  
-  output$download_csv <- downloadHandler(
-    filename = function() {
-      paste0("leaderboard-", input$category, "-", input$identifier, "-", Sys.Date(), ".csv")
-    },
-    content = function(file) {
-      df <- player_stats()
-      req(df)
-      df$rank <- seq_len(nrow(df))
-      write.csv(df[, c("rank", "username", "count", "last_seen")], file, row.names = FALSE)
-    }
+# Prefer the backend's formatted value when it carries a unit (e.g. "123 h",
+# "4.2 km"); otherwise show the raw number with thousands separators.
+display_value <- function(value, formatted) {
+  if (length(formatted) && !is.na(formatted) && grepl("[A-Za-z]", formatted)) formatted
+  else fmt_num(value)
+}
+
+rank_class <- function(rank) {
+  if (rank == 1) "text-amber-500"
+  else if (rank == 2) "text-slate-400"
+  else if (rank == 3) "text-amber-700"
+  else "text-slate-400"
+}
+
+bar_class <- function(rank) {
+  if (rank == 1) "bg-amber-400"
+  else if (rank == 2) "bg-slate-300"
+  else if (rank == 3) "bg-amber-600"
+  else "bg-grass-400"
+}
+
+lb_placeholder <- function(msg) {
+  div(
+    class = "flex flex-col items-center justify-center text-center py-16 px-6",
+    div(class = "text-4xl mb-3 opacity-70", HTML("&#127942;")),  # trophy
+    p(class = "text-slate-500", msg)
   )
 }
+
+lb_row <- function(rank, username, uuid, value, display, max_count) {
+  pct <- if (max_count > 0) max(2, value / max_count * 100) else 2
+  div(
+    class = "flex items-center gap-3 px-2 sm:px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors",
+    div(class = paste("w-7 shrink-0 text-center font-mc text-sm", rank_class(rank)), rank),
+    img(
+      class = "player-head w-9 h-9 rounded-md ring-1 ring-slate-200 bg-slate-100 shrink-0",
+      src = player_head_url(uuid), loading = "lazy", alt = username
+    ),
+    div(
+      class = "flex-1 min-w-0",
+      div(
+        class = "flex items-baseline justify-between gap-3",
+        span(class = "font-medium text-slate-800 truncate", username),
+        span(class = "font-mc text-sm text-slate-900 tabular-nums shrink-0", display)
+      ),
+      div(
+        class = "mt-1.5 h-1.5 w-full rounded-full bg-slate-100 overflow-hidden",
+        div(class = paste("h-full rounded-full", bar_class(rank)),
+            style = sprintf("width:%.1f%%;", pct))
+      )
+    )
+  )
+}
+
+# ---- module server ------------------------------------------------------- #
+
+leaderboard_server <- function(input, output, session) {
+  # Holds a key to apply once its namespace's items have loaded (link restore).
+  pending_identifier <- reactiveVal(NULL)
+
+  # Restore selection from a shared URL (?category=...&identifier=...), once.
+  restored <- reactiveVal(FALSE)
+  observe({
+    if (restored()) return()
+    q_cat <- get_query_param("category")
+    q_id  <- get_query_param("identifier")
+    if (is.null(q_cat) && is.null(q_id)) return()
+    restored(TRUE)
+    if (!is.null(q_cat) && q_cat %in% category_choices) {
+      updateSelectInput(session, "category", selected = q_cat)
+    }
+    if (!is.null(q_id)) pending_identifier(q_id)
+  })
+
+  # Populate the item list whenever the namespace (category) changes.
+  observeEvent(input$category, {
+    req(input$category)
+    choices <- fetch_keys(input$category)
+
+    pend <- isolate(pending_identifier())
+    selected <- if (!is.null(pend) && pend %in% choices) pend else NULL
+    if (!is.null(selected)) pending_identifier(NULL)
+
+    updateSelectizeInput(session, "identifier",
+                         choices = choices, selected = selected, server = TRUE)
+  }, priority = 10)
+
+  # Ranked result for the current selection (top DISPLAY_LIMIT).
+  leaderboard_data <- reactive({
+    req(input$category, input$identifier)
+    fetch_leaderboard(
+      namespace = input$category,
+      key       = input$identifier,
+      limit     = DISPLAY_LIMIT
+    )
+  })
+
+  output$leaderboard <- renderUI({
+    if (is.null(input$identifier) || !nzchar(input$identifier)) {
+      return(lb_placeholder("Pick an item above to see who's on top."))
+    }
+    df <- leaderboard_data()
+    if (is.null(df)) {
+      return(lb_placeholder("No players have recorded this stat yet."))
+    }
+
+    n <- nrow(df)
+    max_count <- max(df$value, na.rm = TRUE)
+
+    cat_label  <- names(category_choices)[match(input$category, category_choices)]
+    stat_label <- paste0(cat_label, " · ", format_identifier(input$identifier))
+
+    rows <- lapply(seq_len(n), function(i) {
+      lb_row(
+        rank = i,
+        username = df$name[i],
+        uuid = df$uuid[i],
+        value = df$value[i],
+        display = display_value(df$value[i], df$formattedValue[i]),
+        max_count = max_count
+      )
+    })
+
+    tagList(
+      div(
+        class = "flex items-center justify-between gap-3 px-2 sm:px-3 pb-3",
+        div(class = "text-sm font-semibold text-slate-700 truncate", stat_label),
+        div(class = "text-xs text-slate-400 shrink-0",
+            if (n >= DISPLAY_LIMIT) sprintf("top %d", DISPLAY_LIMIT)
+            else sprintf("%s players", fmt_num(n)))
+      ),
+      div(class = "space-y-0.5", rows)
+    )
+  })
+
+  output$download_csv <- downloadHandler(
+    filename = function() {
+      sprintf("leaderboard-%s-%s.csv",
+              gsub("[^a-z0-9]+", "_", input$identifier %||% "stat"),
+              Sys.Date())
+    },
+    content = function(file) {
+      req(input$category, input$identifier)
+      df <- fetch_leaderboard(input$category, input$identifier, limit = CSV_LIMIT)
+      req(df)
+      out <- data.frame(
+        rank = seq_len(nrow(df)),
+        name = df$name,
+        uuid = df$uuid,
+        value = df$value,
+        formatted = df$formattedValue
+      )
+      write.csv(out, file, row.names = FALSE)
+    }
+  )
+
+  observeEvent(input$copy_link, {
+    req(input$category, input$identifier)
+    q <- sprintf(
+      "category=%s&identifier=%s",
+      utils::URLencode(input$category, reserved = TRUE),
+      utils::URLencode(input$identifier, reserved = TRUE)
+    )
+    session$sendCustomMessage("copy_share_link", q)
+    showNotification("Link copied to clipboard", duration = 2, type = "message")
+  })
+}
+
+`%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || !nzchar(a)) b else a

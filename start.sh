@@ -3,11 +3,11 @@
 # Configuration
 APP_DIR="/var/www/html/coucou/src"  # Directory containing app.R
 LOG_FILE="app.log"  # Log file for app output
-REQUIRED_PACKAGES=("shiny", "shinyjs", "ggplot2", "plotly", "DBI", "RClickhouse", "RPostgres", "htmltools", "DT", "jsonlite", "pool")  # List of required R packages
+REQUIRED_PACKAGES=("shiny" "shiny.router" "shiny.tailwind" "jsonlite")  # List of required R packages
 
 echo "Installing system dependencies..."
 sudo apt update
-sudo apt install -y libcurl4-openssl-dev libssl-dev libpq-dev
+sudo apt install -y libcurl4-openssl-dev libssl-dev
 
 # Navigate to the app directory
 cd "$APP_DIR" || { echo "Failed to navigate to $APP_DIR"; exit 1; }

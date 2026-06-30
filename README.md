@@ -2,34 +2,35 @@
 
 # [Coucou](https://coucou.kryeit.com) Statistics portal
 
-[R 4.4.3](https://cran.r-project.org) + [Shiny](https://shiny.posit.co)
+[R 4.4+](https://cran.r-project.org) + [Shiny](https://shiny.posit.co)
+
+Player leaderboards built from each player's Minecraft stats, fetched from the
+[Gerente](https://github.com/Kryeit/Gerente) backend's public HTTP API
+(`/api/leaderboard`). No direct database connection.
 
 R libraries:
-- [ShinyJs](https://deanattali.com/shinyjs/)
-- [GGPlot2](https://ggplot2.tidyverse.org)
-- [Plotly](https://plotly.com/r/)
-- [DBI](https://dbi.r-dbi.org)
-- [RPostgres](https://cran.r-project.org/web/packages/RPostgres/index.html)
-- Etc
+- [shiny](https://shiny.posit.co)
+- [shiny.router](https://appsilon.github.io/shiny.router/)
+- [shiny.tailwind](https://kylebutts.github.io/shiny.tailwind/)
+- [jsonlite](https://jeroen.r-universe.dev/jsonlite)
 
 *Recommended editor: [RStudio](https://posit.co/download/rstudio-desktop/)*
+
 ## Running
 
-Create a `.Renviron`:
-```yaml
-CLICKHOUSE_HOST=example.com
-CLICKHOUSE_PORT=YOUR_PORT
-CLICKHOUSE_DBNAME=YOUR_DB_NAME
-CLICKHOUSE_USER=default
-CLICKHOUSE_PASSWORD=YOUR_PASSWORD
-POSTGRES_HOST=example.com
-POSTGRES_PORT=YOUR_PORT
-POSTGRES_DBNAME=YOUR_DB_NAME
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=YOUR_PASSWORD
+Install the dependencies once:
+```r
+source("install_dependencies.R")
 ```
 
-```bash
+The app calls the Gerente API at `https://kryeit.com` by default. To point it at
+a local backend, set `GERENTE_API_URL` in a `.Renviron` in `src/`:
+```yaml
+GERENTE_API_URL=http://localhost:8080
+```
+
+Then, from the `src/` directory:
+```r
 shiny::runApp()
 ```
 Or without a proper workspace:
@@ -37,4 +38,3 @@ Or without a proper workspace:
 chmod +x start.sh
 ./start.sh
 ```
-

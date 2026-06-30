@@ -11,45 +11,37 @@ source_folder <- function(folder) {
 
 source_folder("components")
 source_folder("routes/home")
-source_folder("routes/onlines")
 source_folder("routes/leaderboard")
 
 addResourcePath("assets", "assets")
 
-ui <- fluidPage(
-  use_tailwind(),
+ui <- tagList(
+  tags$head(
+    tags$meta(charset = "utf-8"),
+    tags$meta(name = "viewport", content = "width=device-width, initial-scale=1"),
+    tags$title("Kryeit Statistics")
+  ),
+  use_tailwind(tailwindConfig = "assets/tailwind.config.js"),
   includeCSS("assets/main.css"),
-  
+
   div(
-    class = "min-h-screen flex flex-col",
+    class = "min-h-screen flex flex-col bg-slate-50 text-slate-900",
     header_ui(),
-    
-    tags$main(class = "flex-grow",
-              router_ui(
-                route("/", home_ui()),
-                route("onlines", onlines_ui()),
-                route("leaderboard", leaderboard_ui("leaderboard"))
-              )
+    tags$main(
+      class = "flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 py-8",
+      router_ui(
+        route("/", home_ui()),
+        route("leaderboard", leaderboard_ui("leaderboard"))
+      )
     ),
-    
     footer_ui()
   )
 )
 
 server <- function(input, output, session) {
-  header_server(input, output, session)
   router_server(root_page = "/")
-
-  observe({
-    header_server(input, output, session, current_route = get_page())
-
-    if (get_page() == "onlines") {
-      onlines_server(input, output, session)
-    } else if (get_page() == "leaderboard") {
-      moduleServer("leaderboard", leaderboard_server)
-    }
-  })
-  
+  header_server(input, output, session)
+  moduleServer("leaderboard", leaderboard_server)
 }
 
 shinyApp(ui, server)
