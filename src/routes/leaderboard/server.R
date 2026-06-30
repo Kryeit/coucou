@@ -1,6 +1,7 @@
 source("api/gerente.R")
 
-DISPLAY_LIMIT <- 20L       # bars shown in the chart
+DISPLAY_LIMIT <- 50L       # players shown in the on-screen leaderboard
+PLOT_LIMIT    <- 25L       # bars in the downloadable PNG chart
 CSV_LIMIT     <- 100000L   # rows pulled for a CSV export
 
 `%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || !nzchar(a)) b else a
@@ -23,9 +24,33 @@ label_choices <- function(keys) {
   stats::setNames(keys, ifelse(conflicted, keys, items))
 }
 
-# Horizontal bar chart of the top players for a stat. Base graphics, no deps.
+# Display a count nicely: keep the API's formatted value when it has a unit
+# (e.g. "3,261 h"), otherwise group the raw number with commas.
+display_value <- function(value, formatted) {
+  if (length(formatted) && !is.na(formatted) && grepl("[A-Za-z]", formatted)) formatted
+  else formatC(value, format = "f", big.mark = ",", digits = 0)
+}
+
+# One leaderboard row: rank, head (aligned column), name, bar, value.
+lb_row <- function(rank, name, uuid, value, formatted, maxv) {
+  pct <- if (maxv > 0) max(2, value / maxv * 100) else 2
+  div(
+    class = "flex items-center gap-3 py-1.5 px-2",
+    span(class = "w-6 shrink-0 text-right text-sm text-slate-400", rank),
+    img(class = "w-7 h-7 shrink-0 pixelated rounded-sm bg-slate-100",
+        src = player_head_url(uuid), loading = "lazy", alt = name),
+    span(class = "w-24 sm:w-40 shrink-0 truncate text-slate-800", name),
+    div(class = "flex-1 h-2.5 rounded bg-slate-100 overflow-hidden",
+        div(class = "h-full bg-grass-500", style = sprintf("width:%.1f%%;", pct))),
+    span(class = "w-24 shrink-0 text-right text-xs sm:text-sm tabular-nums text-slate-600",
+         display_value(value, formatted))
+  )
+}
+
+# Horizontal bar chart of the top players, for the downloadable PNG. Base
+# graphics, no extra dependencies.
 build_plot <- function(df, label) {
-  df <- utils::head(df, DISPLAY_LIMIT)
+  df <- utils::head(df, PLOT_LIMIT)
   df <- df[order(df$value), ]                       # largest ends up on top
   op <- par(mar = c(4, 9, 3, 3), font.main = 1, cex.main = 1.2)
   on.exit(par(op))
@@ -89,11 +114,18 @@ leaderboard_server <- function(input, output, session) {
     paste0(cat_label, " / ", format_identifier(input$identifier))
   })
 
-  output$plot <- renderPlot({
+  output$leaderboard <- renderUI({
     req(nzchar(input$identifier %||% ""))
     df <- leaderboard_data()
     req(df)
-    build_plot(df, stat_label())
+    maxv <- max(df$value, na.rm = TRUE)
+    rows <- lapply(seq_len(nrow(df)), function(i) {
+      lb_row(i, df$name[i], df$uuid[i], df$value[i], df$formattedValue[i], maxv)
+    })
+    tagList(
+      div(class = "px-2 pb-3 text-sm font-semibold text-slate-700", stat_label()),
+      div(class = "divide-y divide-slate-50", rows)
+    )
   })
 
   # Buttons only render once there's data, so you can't trigger an empty export.
@@ -102,7 +134,7 @@ leaderboard_server <- function(input, output, session) {
     if (is.null(leaderboard_data())) return(NULL)
     ns <- session$ns
     outline <- paste(
-      "!inline-flex !items-center !justify-center !rounded-lg !px-3 !py-2 !flex-1",
+      "!inline-flex !items-center !justify-center !gap-2 !rounded-lg !px-3 !py-2 !flex-1",
       "!text-xs sm:!text-sm !font-semibold !text-slate-700 !bg-white !border",
       "!border-slate-300 hover:!bg-slate-50 !shadow-none !cursor-pointer"
     )
