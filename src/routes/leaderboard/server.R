@@ -12,6 +12,17 @@ format_identifier <- function(item) {
   gsub("(^|[[:space:]])([[:alpha:]])", "\\1\\U\\2", name, perl = TRUE)
 }
 
+# Named choices for the item dropdown: label is the item id alone, but keeps the
+# "namespace:" prefix when the same item id appears under more than one namespace
+# (e.g. minecraft:stone vs create:stone). Order is left untouched; values stay
+# the full keys.
+label_choices <- function(keys) {
+  if (length(keys) == 0) return(character(0))
+  items <- sub("^[^:]*:", "", keys)
+  conflicted <- items %in% items[duplicated(items)]
+  stats::setNames(keys, ifelse(conflicted, keys, items))
+}
+
 # Horizontal bar chart of the top players for a stat. Base graphics, no deps.
 build_plot <- function(df, label) {
   df <- utils::head(df, DISPLAY_LIMIT)
@@ -34,9 +45,10 @@ leaderboard_server <- function(input, output, session) {
   # leave nothing pre-selected (empty string clears the selectize).
   load_items <- function(cat, select = NULL) {
     if (is.null(cat) || !nzchar(cat)) return(invisible())
-    choices <- fetch_keys(cat)
-    sel <- if (!is.null(select) && select %in% choices) select else ""
-    updateSelectizeInput(session, "identifier", choices = choices, selected = sel)
+    keys <- fetch_keys(cat)
+    sel <- if (!is.null(select) && select %in% keys) select else ""
+    updateSelectizeInput(session, "identifier",
+                         choices = label_choices(keys), selected = sel)
   }
 
   # Repopulate items whenever the namespace changes (no pre-selection).
