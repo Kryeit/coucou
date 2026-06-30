@@ -2,6 +2,7 @@ source("api/gerente.R")
 library(plotly)
 
 DISPLAY_LIMIT <- 40L       # players shown in the chart
+PLOT_LIMIT    <- 25L       # bars in the downloadable PNG
 CSV_LIMIT     <- 100000L   # rows pulled for a CSV export
 
 `%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || !nzchar(a)) b else a
@@ -22,39 +23,58 @@ label_choices <- function(keys) {
   stats::setNames(keys, ifelse(conflicted, keys, items))
 }
 
-# Horizontal plotly bar chart of the top players. Player heads are web images
-# placed at a fixed x (so they line up), kept square via sizing = "contain".
+# Horizontal plotly bar chart of the top players. Each bar shows the player's
+# head + username at its start and the value at its end (no hover needed).
 build_plotly <- function(df, label) {
   df <- utils::head(df, DISPLAY_LIMIT)
   df <- df[order(df$value), ]                      # largest ends up on top
-  df$hover <- sprintf("<b>%s</b><br>%s", df$name, df$formattedValue)
   uuids <- as.character(df$uuid)
+  usernames <- as.character(df$name)
   df$name <- factor(df$name, levels = df$name)     # keep order on the y axis
   n <- nrow(df)
 
   heads <- lapply(seq_len(n), function(i) list(
     source = player_head_url(uuids[i]),
-    xref = "paper", yref = "y", x = -0.012, y = i - 1,
-    sizex = 0.07, sizey = 0.92, xanchor = "right", yanchor = "middle",
+    xref = "paper", yref = "y", x = 0.004, y = i - 1,
+    sizex = 0.05, sizey = 0.86, xanchor = "left", yanchor = "middle",
     sizing = "contain", layer = "above"
+  ))
+  names_ann <- lapply(seq_len(n), function(i) list(
+    xref = "paper", yref = "y", x = 0.058, y = i - 1,
+    text = usernames[i], showarrow = FALSE, xanchor = "left", yanchor = "middle",
+    font = list(family = "Minecraftia, monospace", size = 12, color = "#0f172a")
   ))
 
   plot_ly(df, x = ~value, y = ~name, type = "bar", orientation = "h",
-          height = max(420, n * 26 + 130),
+          height = max(420, n * 28 + 130),
           marker = list(color = "#539b32"),
-          hovertext = ~hover, hoverinfo = "text") %>%
+          text = ~formattedValue, textposition = "outside",
+          textfont = list(size = 11, color = "#334155"),
+          cliponaxis = FALSE, hoverinfo = "none") %>%
     layout(
       title = list(text = label, x = 0, xanchor = "left", font = list(size = 16)),
       font = list(family = "Minecraftia, monospace", size = 12, color = "#0f172a"),
-      margin = list(l = 60, r = 28, t = 56, b = 36),
-      xaxis = list(title = "", zeroline = FALSE, gridcolor = "#eef2f6", fixedrange = TRUE),
+      margin = list(l = 12, r = 64, t = 56, b = 24),
+      xaxis = list(title = "", zeroline = FALSE, showgrid = FALSE,
+                   showticklabels = FALSE, fixedrange = TRUE),
       yaxis = list(title = "", showticklabels = FALSE, fixedrange = TRUE),
-      images = heads, bargap = 0.3,
-      paper_bgcolor = "white", plot_bgcolor = "white"
+      images = heads, annotations = names_ann, bargap = 0.3,
+      hovermode = FALSE, paper_bgcolor = "white", plot_bgcolor = "white"
     ) %>%
-    config(displaylogo = FALSE,
-           modeBarButtonsToRemove = list("lasso2d", "select2d", "zoom2d",
-                                         "pan2d", "zoomIn2d", "zoomOut2d", "autoScale2d"))
+    config(displayModeBar = FALSE)
+}
+
+# Plain bar chart for the downloadable PNG (base graphics, no extra deps).
+build_plot <- function(df, label) {
+  df <- utils::head(df, PLOT_LIMIT)
+  df <- df[order(df$value), ]
+  op <- par(mar = c(4, 9, 3, 4), font.main = 1, cex.main = 1.2)
+  on.exit(par(op))
+  bp <- barplot(df$value, names.arg = df$name, horiz = TRUE, las = 1,
+                col = "#539b32", border = NA, main = label,
+                cex.names = 0.85, xlim = c(0, max(df$value) * 1.13))
+  text(df$value, bp, labels = df$formattedValue, pos = 4,
+       cex = 0.8, col = "#334155", xpd = TRUE)
 }
 
 leaderboard_server <- function(input, output, session) {
@@ -124,6 +144,10 @@ leaderboard_server <- function(input, output, session) {
         "!inline-flex !items-center !justify-center !gap-2 !rounded-lg !px-3 !py-2 !flex-1",
         "!text-xs sm:!text-sm !font-semibold !text-slate-700 !bg-white !border",
         "!border-slate-300 hover:!bg-slate-50 !shadow-none !cursor-pointer")),
+      downloadButton(ns("download_png"), "PNG", class = paste(
+        "!inline-flex !items-center !justify-center !gap-2 !rounded-lg !px-3 !py-2 !flex-1",
+        "!text-xs sm:!text-sm !font-semibold !text-slate-700 !bg-white !border",
+        "!border-slate-300 hover:!bg-slate-50 !shadow-none !cursor-pointer")),
       tags$button(
         type = "button", onclick = "coucouShare(this)",
         class = paste(
@@ -159,6 +183,20 @@ leaderboard_server <- function(input, output, session) {
                    value = df$value, formatted = df$formattedValue)
       }
       write.csv(out, file, row.names = FALSE)
+    }
+  )
+
+  output$download_png <- downloadHandler(
+    filename = function() {
+      sprintf("leaderboard-%s-%s.png",
+              gsub("[^a-z0-9]+", "_", input$identifier %||% "stat"), Sys.Date())
+    },
+    content = function(file) {
+      df <- leaderboard_data()
+      req(df)
+      png(file, width = 1000, height = 700, res = 120)
+      on.exit(dev.off())
+      build_plot(df, isolate(stat_label()))
     }
   )
 }
