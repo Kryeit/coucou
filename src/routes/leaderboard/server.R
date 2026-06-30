@@ -70,10 +70,27 @@ lb_row <- function(rank, username, uuid, value, display, max_count) {
 # ---- module server ------------------------------------------------------- #
 
 leaderboard_server <- function(input, output, session) {
-  # Holds a key to apply once its namespace's items have loaded (link restore).
+  # Holds a link-restored item to select once its namespace's items load.
   pending_identifier <- reactiveVal(NULL)
 
-  # Restore selection from a shared URL (?category=...&identifier=...), once.
+  # Fetch a namespace's keys into the item dropdown, optionally preselecting one.
+  load_items <- function(cat, select = NULL) {
+    if (is.null(cat) || !nzchar(cat)) return(invisible())
+    choices <- fetch_keys(cat)
+    sel <- if (!is.null(select) && select %in% choices) select else NULL
+    updateSelectizeInput(session, "identifier",
+                         choices = choices, selected = sel, server = TRUE)
+  }
+
+  # Repopulate items whenever the namespace changes, applying any pending item.
+  observeEvent(input$category, {
+    req(input$category)
+    pend <- isolate(pending_identifier())
+    pending_identifier(NULL)
+    load_items(input$category, pend)
+  }, priority = 10)
+
+  # Restore a selection shared via URL (?category=...&identifier=...), once.
   restored <- reactiveVal(FALSE)
   observe({
     if (restored()) return()
@@ -81,24 +98,17 @@ leaderboard_server <- function(input, output, session) {
     q_id  <- get_query_param("identifier")
     if (is.null(q_cat) && is.null(q_id)) return()
     restored(TRUE)
-    if (!is.null(q_cat) && q_cat %in% category_choices) {
+
+    if (!is.null(q_cat) && q_cat %in% category_choices &&
+        !identical(isolate(input$category), q_cat)) {
+      # Namespace will change; its observer loads items and applies this id.
+      pending_identifier(q_id)
       updateSelectizeInput(session, "category", selected = q_cat)
+    } else if (!is.null(q_id)) {
+      # Namespace already correct (e.g. the default) -> load + select now.
+      load_items(isolate(input$category), q_id)
     }
-    if (!is.null(q_id)) pending_identifier(q_id)
   })
-
-  # Populate the item list whenever the namespace (category) changes.
-  observeEvent(input$category, {
-    req(input$category)
-    choices <- fetch_keys(input$category)
-
-    pend <- isolate(pending_identifier())
-    selected <- if (!is.null(pend) && pend %in% choices) pend else NULL
-    if (!is.null(selected)) pending_identifier(NULL)
-
-    updateSelectizeInput(session, "identifier",
-                         choices = choices, selected = selected, server = TRUE)
-  }, priority = 10)
 
   # Ranked result for the current selection (top DISPLAY_LIMIT).
   leaderboard_data <- reactive({
@@ -148,6 +158,32 @@ leaderboard_server <- function(input, output, session) {
     )
   })
 
+  # Action buttons render only once there's data, so you can't trigger an empty
+  # CSV / PNG / share link (which previously returned an error page).
+  output$actions <- renderUI({
+    if (!nzchar(input$identifier %||% "")) return(NULL)
+    if (is.null(leaderboard_data())) return(NULL)
+    ns <- session$ns
+    outline <- paste(
+      "!inline-flex !items-center !justify-center !rounded-lg !px-3 !py-2 !flex-1",
+      "!text-sm !font-semibold !text-slate-700 !bg-white !border !border-slate-300",
+      "hover:!bg-slate-50 !shadow-none !cursor-pointer"
+    )
+    div(
+      class = "flex gap-2",
+      downloadButton(ns("download_csv"), "CSV", class = outline),
+      tags$button("PNG", type = "button", onclick = "coucouDownloadPng()", class = outline),
+      actionButton(
+        ns("copy_link"), "Copy",
+        class = paste(
+          "!inline-flex !items-center !justify-center !rounded-lg !px-3 !py-2 !flex-1",
+          "!text-sm !font-semibold !text-white !bg-slate-800 hover:!bg-slate-900",
+          "!border-0 !shadow-none"
+        )
+      )
+    )
+  })
+
   output$download_csv <- downloadHandler(
     filename = function() {
       sprintf("leaderboard-%s-%s.csv",
@@ -155,16 +191,15 @@ leaderboard_server <- function(input, output, session) {
               Sys.Date())
     },
     content = function(file) {
-      req(input$category, input$identifier)
-      df <- fetch_leaderboard(input$category, input$identifier, limit = CSV_LIMIT)
-      req(df)
-      out <- data.frame(
-        rank = seq_len(nrow(df)),
-        name = df$name,
-        uuid = df$uuid,
-        value = df$value,
-        formatted = df$formattedValue
-      )
+      df <- if (isTRUE(nzchar(input$identifier)))
+        fetch_leaderboard(input$category, input$identifier, limit = CSV_LIMIT) else NULL
+      out <- if (is.null(df)) {
+        data.frame(rank = integer(), name = character(), uuid = character(),
+                   value = numeric(), formatted = character())
+      } else {
+        data.frame(rank = seq_len(nrow(df)), name = df$name, uuid = df$uuid,
+                   value = df$value, formatted = df$formattedValue)
+      }
       write.csv(out, file, row.names = FALSE)
     }
   )

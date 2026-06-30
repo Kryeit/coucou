@@ -12,13 +12,33 @@ leaderboard_ui <- function(id) {
   ns <- NS(id)
 
   div(
-    # Small client-side clipboard helper for the "Copy link" button.
+    # html2canvas: used to snapshot the leaderboard to a PNG.
+    tags$script(src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),
+    # Clipboard helper (with execCommand fallback) + PNG download.
     tags$script(HTML(paste(
       "Shiny.addCustomMessageHandler('copy_share_link', function(q){",
-      "  var base = window.location.origin + window.location.pathname;",
-      "  var url = base + '#!/leaderboard?' + q;",
-      "  if (navigator.clipboard) { navigator.clipboard.writeText(url); }",
+      "  var url = window.location.origin + window.location.pathname + '#!/leaderboard?' + q;",
+      "  if (navigator.clipboard && navigator.clipboard.writeText) {",
+      "    navigator.clipboard.writeText(url).catch(function(){ coucouCopyFallback(url); });",
+      "  } else { coucouCopyFallback(url); }",
       "});",
+      "function coucouCopyFallback(text){",
+      "  var ta = document.createElement('textarea');",
+      "  ta.value = text; ta.style.position = 'fixed'; ta.style.top = '-1000px';",
+      "  document.body.appendChild(ta); ta.focus(); ta.select();",
+      "  try { document.execCommand('copy'); } catch (e) {}",
+      "  document.body.removeChild(ta);",
+      "}",
+      "function coucouDownloadPng(){",
+      "  var el = document.getElementById('leaderboard-leaderboard');",
+      "  if (!el || typeof html2canvas === 'undefined') return;",
+      "  html2canvas(el, {backgroundColor: '#ffffff', useCORS: true, scale: 2}).then(function(canvas){",
+      "    var a = document.createElement('a');",
+      "    a.download = 'leaderboard.png';",
+      "    a.href = canvas.toDataURL('image/png');",
+      "    a.click();",
+      "  });",
+      "}",
       sep = "\n"
     ))),
 
@@ -45,30 +65,16 @@ leaderboard_ui <- function(id) {
           )
         ),
         div(
-          class = "sm:col-span-5",
+          class = "sm:col-span-4",
           selectizeInput(
             ns("identifier"), "Item", choices = NULL, width = "100%",
             options = list(placeholder = "Select an item", maxOptions = 1000)
           )
         ),
         div(
-          class = "sm:col-span-3 flex gap-2",
-          downloadButton(
-            ns("download_csv"), "CSV",
-            class = paste(
-              "!inline-flex !items-center !justify-center !gap-2 !rounded-lg !px-3 !py-2",
-              "!text-sm !font-semibold !text-slate-700 !bg-white !border !border-slate-300",
-              "hover:!bg-slate-50 !shadow-none !flex-1"
-            )
-          ),
-          actionButton(
-            ns("copy_link"), "Copy link",
-            class = paste(
-              "!inline-flex !items-center !justify-center !gap-2 !rounded-lg !px-3 !py-2",
-              "!text-sm !font-semibold !text-white !bg-slate-800 hover:!bg-slate-900",
-              "!border-0 !shadow-none !flex-1"
-            )
-          )
+          class = "sm:col-span-4",
+          # Buttons only render when there's data to act on (see server).
+          uiOutput(ns("actions"))
         )
       ),
 
