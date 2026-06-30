@@ -93,6 +93,7 @@ img.pixelated,
   border-radius: 0.5rem;
   box-shadow: 0 8px 24px rgba(16, 24, 40, .12);
   overflow: hidden;
+  z-index: 1000;             /* render above the card / sticky header */
 }
 
 .selectize-dropdown .active {

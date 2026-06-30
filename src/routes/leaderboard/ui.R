@@ -55,14 +55,16 @@ leaderboard_ui <- function(id) {
           class = "sm:col-span-4",
           selectizeInput(
             ns("category"), "Category", choices = category_choices,
-            selected = "minecraft:custom", width = "100%"
+            selected = "minecraft:custom", width = "100%",
+            options = list(dropdownParent = "body")
           )
         ),
         div(
           class = "sm:col-span-4",
           selectizeInput(
             ns("identifier"), "Item", choices = NULL, width = "100%",
-            options = list(placeholder = "Select an item", maxOptions = 2000)
+            options = list(placeholder = "Select an item", maxOptions = 2000,
+                           dropdownParent = "body")
           )
         ),
         div(
